@@ -6,10 +6,6 @@
 
 **(역할)** 기획/디자인/개발/배포(1인 프로젝트)
 
-
-
-
-
 # 02. 구현 기능(Implemented Features)
 웹 페이지 제작에서 구현한 기능은 아래와 같습니다.
 
@@ -44,47 +40,47 @@ gantt
 
     section Main-page
     url 설정                     : done, c1, 2024-08-26, 1d
-    '입장하기' 생성               : c2, 2024-08-26, 1d
+    '입장하기' 생성               : done, c2, 2024-08-26, 1d
     
     section Admin
     계정 생성                     : done,  d1, 2024-08-26, 1d
-    페이지 생성                   : active,  d2, 2024-08-26, 1d
-    게시글 작성                   : active,  d3, 2024-08-26, 1d
+    페이지 생성                   : done,  d2, 2024-08-26, 1d
+    게시글 작성                   : done,  d3, 2024-08-27, 1d
 
     section Model
     ERD 작성                     : done, e1, 2024-08-26, 1d
-    Medel 생성                   : e2, 2024-08-26, 1d
-    마이그레이션                  : e2-1, 2024-08-26, 1d
+    Medel 생성                   : done, e2, 2024-08-27, 1d
+    마이그레이션                  : done, e2-1, 2024-08-27, 1d
     
     section CRUD 기능
-    View 작성                   : e1, 2024-08-27, 1d
-    (C)글 작성                   : e1-1, 2024-08-27, 1d
-    (R)글 읽기                   : e1-2, 2024-08-27, 1d
-    (U)글 수정                   : e1-3, 2024-08-27, 1d
-    (D)글 삭제                   : e1-4, 2024-08-27, 1d
-    Form 작성                   : e2, 2024-08-27, 1d
-    Url 패턴 설정                 :  e3, 2024-08-27, 1d
-    Template작성                   : e4, 2024-08-28, 1d
-    Create-T                   : e4-1, 2024-08-28, 1d
-    Read-T                   : e4-1, 2024-08-28, 1d
-    Update-T                   : e4-1, 2024-08-28, 1d
-    Delete-T                   : e4-1, 2024-08-28, 1d
+    View 작성                   : done, e1, 2024-08-27, 1d
+    (C)글 작성                   : done, e1-1, 2024-08-27, 1d
+    (R)글 읽기                   : done, e1-2, 2024-08-27, 1d
+    (U)글 수정                   : done, e1-3, 2024-08-27, 1d
+    (D)글 삭제                   : done, e1-4, 2024-08-27, 1d
+    Form 작성                   : done, e2, 2024-08-27, 1d
+    Url 패턴 설정                 : done,  e3, 2024-08-27, 1d
+    Template작성                   : done, e4, 2024-08-27, 1d
+    Create-T                   : done, e4-1, 2024-08-27, 1d
+    Read-T                   : done, e4-1, 2024-08-27, 1d
+    Update-T                   : done, e4-1, 2024-08-27, 1d
+    Delete-T                   : done, e4-1, 2024-08-27, 1d
 
     section 사용자 계정
-    회원가입                   : f1, 2024-08-27, 1d
-    로그인/아웃                   : f2, 2024-08-27, 1d
-    회원 인증                   : f3, 2024-08-27, 1d
-    글 작성                   : f3-1, 2024-08-27, 1d
-    글 수정                   : f3-2, 2024-08-27, 1d
-    글 삭제                   : f3-3, 2024-08-27, 1d
+    회원가입                   : active, f1, 2024-08-27, 1d
+    로그인/아웃                   : active, f2, 2024-08-27, 1d
+    회원 인증                   : active, f3, 2024-08-27, 1d
+    글 작성                   : active, f3-1, 2024-08-27, 1d
+    글 수정                   : active, f3-2, 2024-08-27, 1d
+    글 삭제                   : active, f3-3, 2024-08-27, 1d
 
 
     section 추가 기능 개발
-    글 상세보기                   : g1, 2024-08-27, 1d
+    글 상세보기                   : done, g1, 2024-08-27, 1d
     파일 업로드                   : g2, 2024-08-27, 1d
     조회수                      : g3, 2024-08-27, 1d
-    글 삭제 후 글 목록 화면      : g4, 2024-08-28, 1d
-    삭제글 접근불가 + 404에러   : g5, 2024-08-28, 1d
+    글 삭제 후 글 목록 화면      : done, g4, 2024-08-27, 1d
+    삭제글 접근불가 + 404에러   : done, g5, 2024-08-27, 1d
     게시글 검색(주제, 카테고리)   : g6, 2024-08-28, 1d
     시간순에 따라 게시글 정렬   : g7, 2024-08-28, 1d
     마이페이지 기능                   : g8, 2024-08-28, 2d
@@ -121,12 +117,46 @@ gantt
     프로젝트 평가 및 회고         : j3, 2024-09-02, 1d
 ```
 
+# 04. 웹페이지 구조(Website Structure)
+```mermaid
+graph TD
+    A[메인 페이지 home] --> B[블로그 입장 페이지 enter_blog]
+    B --> C[블로그 게시글 목록 post_list]
+    C --> D[게시글 상세 post_detail]
+    C --> |로그인 사용자|E[게시글 작성 post_create]
+    D --> |작성자|F[게시글 수정 post_update]
+    D --> |작성자|G[게시글 삭제 post_delete]
+    A --> |관리자|H[관리자 페이지 admin]
+    H --> I[카테고리 관리 blog_category]
+    H --> J[게시글 관리 blog_post]
 
-# 04. Wire Frame (with Figma)
+    subgraph 로그인 사용자 영역
+        E
+    end
+
+    subgraph 작성자 영역
+        F
+        G
+    end
+
+    subgraph 관리자 영역
+        H
+        I
+        J
+    end
+
+    classDef default fill:#001d35,stroke:#333,stroke-width:2px;
+    classDef loggedIn fill:#522064,stroke:#333,stroke-width:2px;
+    classDef admin fill:#20645f,stroke:#333,stroke-width:2px;
+    class E,F,G loggedIn;
+    class H,I,J admin;
+```
+
+# 05. Wire Frame (with Figma)
 - (작성 예정)
 
 
-# 05. ERD(Entity Relationship Diagram)
+# 06. ERD(Entity Relationship Diagram)
 ```mermaid
 erDiagram
     User ||--o{ Post : writes
@@ -167,11 +197,11 @@ erDiagram
 
 ```
 
-# 06. 배포(Release)
+# 07. 배포(Release)
 - (작성 예정)
 
 
-# 07. 시연 영상(Demo Version)
+# 08. 시연 영상(Demo Version)
 
 | 카테고리      | 기능                   | 설명                  | 영상              |
 |---------------|------------------------|-----------------------|-------------------|
@@ -195,7 +225,7 @@ erDiagram
 
 
 
-# 08. 기술 스택(Tech Stack)
+# 09. 기술 스택(Tech Stack)
 
 | 카테고리          | 기술 스택                | 설명                                                |
 |------------------|--------------------------|-----------------------------------------------------|
@@ -211,4 +241,6 @@ erDiagram
 |                  | Mermaid                 | 프로젝트 구조와 데이터 흐름을 문서화 |
 |                  | Figma                   | 블로그의 디자인 프로토타입을 작성하고 사용자 경험을 설계 |
 
-# 09. 회고(Retrospect)
+# 10. 회고(Retrospect)
+
+

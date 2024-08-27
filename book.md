@@ -425,7 +425,7 @@ def post_update(request, pk):
             return redirect('post_detail', pk=pk)
     else:
         form = PostForm(instance=post)
-    return render(request, 'blog/post_form.html', {'form': form})
+    return render(request, 'blog/post_update.html', {'form': form})
 ```
 
 #### 글 삭제
@@ -440,7 +440,7 @@ def post_delete(request, pk):
     if request.method == "POST":
         post.delete()
         return redirect('post_list')
-    return render(request, 'blog/post_confirm_delete.html', {'post': post})
+    return render(request, 'blog/post_delete.html', {'post': post})
 ```
 
 ### URL 설정
@@ -576,7 +576,7 @@ urlpatterns = [
 </head>
 <body>
     <h1>글 삭제</h1>
-    <p>해당 글을 삭제하시겠습니까? "{{ post.title }}"?</p>
+    <p> <strong>"{{ post.title }}"</strong>글을 삭제하시겠습니까? </p>
     <form method="post">
         {% csrf_token %}
         <button type="submit">삭제</button>
@@ -645,8 +645,19 @@ INSTALLED_APPS = [
     "blog",  # 추가된 코드
 ]
 ```
+## 사. 관리자 사이트 연결
+블로그 글을 Django 관리자(admin)화면에서 "Category", "Post" 섹션을 관리할 수 있도록 연결합니다.
+`blog/admin.py` 파일에 아래의 코드를 입력 후 저장합니다.
+```python
+from django.contrib import admin
+from .models import Category, Post
 
-## 사. 서버 실행 및 결과 확인
+admin.site.register(Category)
+admin.site.register(Post)
+```
+
+
+## 아. 서버 실행 및 결과 확인
 모든 설정이 완료된 후 저장 및 서버를 실행합니다.
 ```shell
 python manage.py runserver

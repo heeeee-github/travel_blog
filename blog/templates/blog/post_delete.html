@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>글 삭제</h1>
-    <p>해당 글을 삭제하시겠습니까? "{{ post.title }}"?</p>
+    <p> <strong>"{{ post.title }}"</strong>글을 삭제하시겠습니까? </p>
     <form method="post">
         {% csrf_token %}
         <button type="submit">삭제</button>

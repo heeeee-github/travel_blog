@@ -4,7 +4,8 @@ from .forms import PostForm  # forms.py에서 작성한 폼을 사용
 
 def post_list(request):
     posts = Post.objects.all()
-    return render(request, 'blog/post_list.html', {'posts': posts})
+    categories = Category.objects.all()  # 모든 카테고리 가져오기
+    return render(request, 'blog/post_list.html', {'posts': posts, 'categories': categories})
 
 def post_detail(request, pk):
     post = get_object_or_404(Post, pk=pk)
@@ -37,3 +38,10 @@ def post_delete(request, pk):
         post.delete()
         return redirect('post_list')
     return render(request, 'blog/post_delete.html', {'post': post})
+
+
+def posts_by_category(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+    posts = Post.objects.filter(category=category)
+
+    return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})

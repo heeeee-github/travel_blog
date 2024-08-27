@@ -585,8 +585,104 @@ urlpatterns = [
 </body>
 </html>
 ```
+## 마. 카테고리 검색 기능
+카테고리를 선택하여 해당 카테고리에 속하는 게시물만 필터링하는 기능을 생성합니다. 
 
-## 마. main App 업데이트
+### 1) View 작성
+카테고리를 기준으로 게시물을 검색하는 뷰를 먼저 작성합니다. `blog/views.py`에 아래의 코드를 작성합니다.
+
+```python
+# 이어서 작성
+def posts_by_category(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+    posts = Post.objects.filter(category=category)
+
+    return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})
+
+```
+
+### 2) URL 패턴 설정  
+다음으로 URL 패턴을 설정합니다. `blog/urls.py`에 아래의 코드를 작성합니다.
+```python
+# 이어서 작성
+urlpatterns = [
+    path('category/<int:category_id>/', views.posts_by_category, name='posts_by_category'), # 추가된 코드
+]
+```
+
+### 3) Template 작성
+이제 검색 결과를 표시할 템플릿을 작성하는 과정입니다. `posts_by_category.html` 파일을 생성하고 아래의 코드를 작성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ category.name }} Posts</title>
+</head>
+<body>
+    <h1>Posts in {{ category.name }}</h1>
+
+    {% if posts %}
+        <ul>
+            {% for post in posts %}
+                <li>{{ post.title }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No posts in this category.</p>
+    {% endif %}
+
+    <a href="{% url 'post_list' %}">Back to All Posts</a>
+</body>
+</html>
+```
+
+### 4) 업데이트
+#### Template 업데이트
+카테고리별로 게시물을 검색할 수 있도록 카테고리를 선택할 수 있는 드롭다운이나 링크 목록을 메인페이지에 추가합니다. `post_list.html`을 업데이트합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Posts</title>
+</head>
+<body>
+    <h1>All Posts</h1>
+
+    <div>
+        <h2>Filter by Category</h2>
+        <ul>
+            {% for category in categories %}
+                <li><a href="{% url 'posts_by_category' category.id %}">{{ category.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <ul>
+        {% for post in posts %}
+            <li>{{ post.title }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+```
+#### View 업데이트
+`blog/views.py`에 작성되어 있는 `post_list`를 재정의합니다.
+글 뿐만 아니라 카테고리 정보까지 함께 가져오는 코드로 수정합니다.
+
+```python
+def post_list(request):
+    posts = Post.objects.all()
+    categories = Category.objects.all()  # 모든 카테고리 가져오기
+    return render(request, 'blog/post_list.html', {'posts': posts, 'categories': categories})
+```
+
+> **`blog/views.py`에서 `posts_by_category`를 작성했는데, `post_list`를 업데이트 하는 이유**
+>
+> 두 함수는 다른 화면을 보여주기 위해 정의합니다.  
+> **`post_list`** 는 블로그의 모든 글을 보여주며, **`posts_by_category`** 는 선택한 카테고리애 해당하는 글들만 필터링이 되어 화면에 보여줍니다.
+
+
+## 바. main App 업데이트
 앞서 생성한 `main`앱에서 "입장하기" 버튼을 눌렀을 대 `blog`앱의 블로그 페이지가 표시되도록 설계하는 단계입니다.
 
 ### 1) View 업데이트
@@ -1010,7 +1106,7 @@ http://127.0.0.1:8000/
 
 # 10. 참고
 
-## URL 패턴 확인
+## 가. URL 패턴 확인
 `django-extensions` 패키지를 활용하여 URL 패턴을 확인할 수 있습니다.
 먼저, 패키지를 설치 합니다.
 ```shell
@@ -1023,7 +1119,7 @@ pip install django-extensions
 python manage.py show_urls
 ```
 
-## git commit imoji
+## 나. git commit imoji
 ### 주요 이모지와 의미
 | 이모지  | 코드 (`:`)        | 의미                              |
 |---------|-------------------|-----------------------------------|

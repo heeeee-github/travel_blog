@@ -75,7 +75,7 @@ Django 패키지가 정상적으로 설치되었는지 확인하기 위하여 �
 
 **설치된 패키지 리스트 확인**
 ```shell
-pip list # asgiref, Django, pip, sqlparse, tzdata
+pip list # asgiref, Django, pip, setuptools, sqlparse, tzdata
 ```
 
 **패키지 버전 확인**
@@ -165,7 +165,8 @@ http://127.0.0.1:8000/admin/
 # 4. 메인화면
 ## 가. 메인 앱 생성
 입장하기 화면을 관리할 새로운 앱 `main`을 생성합니다.
-```
+
+```shell
 python manage.py startapp main
 ```
 
@@ -179,7 +180,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.home , name = 'home')
+    path('', views.home , name = 'home'),
 ]
 ```
 
@@ -196,6 +197,74 @@ urlpatterns = [
 ]
 
 ```
+
+## 다. View 설정
+이제 메인화면을 렌더링할 뷰를 생성합니다.
+이미 생성되어 있는 `main/views.py` 파일에 코드를 작성합니다.
+코드는 `home` 연결을 요청할 때, 이후에 작성할 `main/home.html` 로 연결하도록 작성합니다.
+
+```python
+from django.shortcuts import render
+
+def home(request) : 
+    return render(request, "main/home.html")
+```
+
+## 라. Template 설정
+마지막으로 `home`화면을 생성합니다. 먼저, 앱과 화면을 구축하기 위하여 스타일링은 진행하지 않습니다.
+### 폴더 생성
+
+`main`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `main`폴더를 생성하여 `home.html` 파일을 생성합니다. 파일 생성 시 `main/templates/main/home.html` 로 한 번에 작성하면 폴더와 파일이 함께 생성됩니다.
+
+### Template 작성
+메인 화면과 "입장하기" 버튼을 포함한 기본 템플릿을 작성합니다.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 페이지</title>
+</head>
+<body>
+    <h1>환영합니다!</h1>
+    <p>여기는 메인 페이지입니다.</p>
+    <a href="{% url 'home' %}">
+        <button>입장하기</button>
+    </a>
+</body>
+</html>
+```
+### setting
+마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
+`travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
+```python
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "main", # 추가된 코드
+]
+```
+
+
+## 마. 서버 실행 및 결과 확인
+모든 설정이 완료된 후 저장 및 서버를 실행합니다.
+```shell
+python manage.py runserver
+```
+
+다음 URL로 이동하여 결과를 확인합니다.
+```
+http://127.0.0.1:8000/
+```
+
+
+
 
 
 # 5. 게시글

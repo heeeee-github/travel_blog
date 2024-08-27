@@ -185,7 +185,7 @@ urlpatterns = [
 ```
 
 ### travel_blog/urls.py
-`travel_blog`앱 폴더 안 `urls.py` 에 `main`으로 이동할 수 있도록 url을 추가합니다.
+`travel_blog`앱 폴더 안 `urls.py` 에 `main`으로 이동할 수 있도록 urlpattern을 추가합니다.
 
 ```python
 from django.contrib import admin
@@ -298,6 +298,7 @@ http://127.0.0.1:8000/
 ```shell
 python manage.py startapp blog
 ```
+
 ## 나. Model 설정
 블로그의 핵심인 **블로그 글에서 보여줄 정보(데이터)** 를 정의하는 과정입니다. 블로그 방문객들에게 글을 전달하기 위해 필요한 모든 정보를 포함합니다. 
 
@@ -629,8 +630,8 @@ urlpatterns = [
 </html>
 ```
 
-## 바. 프로젝트 ~ 앱 연결
-### setting
+## 바. setting
+### INSTALLED_APPS
 마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
 `travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
 ```python
@@ -645,6 +646,7 @@ INSTALLED_APPS = [
     "blog",  # 추가된 코드
 ]
 ```
+
 ## 사. 관리자 사이트 연결
 블로그 글을 Django 관리자(admin)화면에서 "Category", "Post" 섹션을 관리할 수 있도록 연결합니다.
 `blog/admin.py` 파일에 아래의 코드를 입력 후 저장합니다.
@@ -655,7 +657,6 @@ from .models import Category, Post
 admin.site.register(Category)
 admin.site.register(Post)
 ```
-
 
 ## 아. 서버 실행 및 결과 확인
 모든 설정이 완료된 후 저장 및 서버를 실행합니다.
@@ -669,59 +670,337 @@ http://127.0.0.1:8000/
 ```
 
 
----
+
+# 6. 회원가입 및 로그인/아웃
+회원을 관리하기 위해 회원가입 및 로그인/아웃기능을 설계하는 단계입니다.
+
+## 가. 메인 앱 생성
+회원읠 관리할 새로운 앱 `accounts`를 생성합니다.
+
+```shell
+python manage.py startapp accounts
+```
+
+## 나. 회원가입 기능 추가
+### Form 설계
+회원가입 때 받을 사용자 정보를 
+`accounts`앱에서 `forms.py`파일을 생성 후 코드를 작성합니다.
+```python
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
+class SignUpForm(UserCreationForm) : 
+    email = forms.EmailField(required= True, label = '이메일 주소')
+
+    class Meta : 
+        model = User
+        fields = ('username', 'email', 'password1','password2')
+```
+### View 설계
+`forms.py`에서 설계한 `SignUpForm` 받아 회원가입 화면을 보여주는 단계입니다.
+`accounts/views.py` 파일에서 회원가입 후 
+```python
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from .forms import SignUpForm
+
+def signup(request):
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('home')
+    else:
+        form = SignUpForm()
+    return render(request, 'accounts/signup.html', {'form': form})
+```
+### URL 설계 
+회원가입 URL 설정을 위하여 `accounts/urls.py` 파일을 생성하고 코드를 작성합니다.
+```python
+from django.urls import path
+from .views import signup
+from . import views
+
+urlpatterns = [
+    path('signup/', views.signup_view, name='signup'),
+]
+```
+
+### Template 설정
+#### 폴더 및 파일 생성
+`accounts`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `accounts`폴더를 생성하여 `signup.html` 파일을 생성합니다. 파일 생성 시 `accounts/templates/accounts/signup.html` 로 한 번에 작성하면 폴더와 파일이 함께 생성됩니다.
+
+#### Template 작성
+회원가입을 위한 기본 화면을 작성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>회원가입</title>
+</head>
+<body>
+    <h2>회원가입</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">가입하기</button>
+    </form>
+</body>
+</html>
+```
+
+>**`{% csrf_token %}`을 사용하는 이유**
+>
+> **CSRF(Cross-Site Request Forgery)** 는 사용자가 로그인된 상태에서 악의적인 웹페이지가 사용자의 권한으로 요청을 보내는 공격 방식입니다. 예를 들어, 금융사이트에 로그인한 상태에서 악의적인 웹페이지를 방문하면 해당 웹페이지에서 금융 계좌에 이체 요청을 보낼 수 있습니다.
+>
+> **CSRF token** 은 이러한 공격을 방지하기 위하여 사용합니다.
+> * 사용자가 페이지를 요청할 때 서버가 랜덤 토큰을 생성하여 사용자에게 전달합니다. 이 토큰은 서버에서만 알고 있는 값입니다.
+> * 생성된 랜덤 토큰은 HTML에 포함되어 사용자에게 전송됩니다. 폼이 제출될 때 함께 전송하도록 합니다.
+> * 사용자가 폼을 제출하면 서버는 요청에 포함된 토큰과 서버에 저장된 토큰이 일치하는지 비교 후 요청을 처리합니다. 일지하지 않는 경우 요청을 거부합니다.
 
 
+## 다. 로그인/로그아웃
+
+### URL 설정
+#### accounts/urls.py
+기존에 작성한 `accounts/urls.py` 파일에 로그인과 로그아웃 url 코드를 작성합니다.
+```python
+from django.urls import path
+from .views import signup
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    path('signup/', signup, name='signup'),
+    path('login/', auth_views.LoginView.as_view(), name='login'),#추가된 코드
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'), #추가된 코드
+]
+
+```
+#### blog/urls.py
+연결할 앱의 url 파일을 열어 `accounts`앱의 URL을 추가합니다.
+```python
+# 이어서 작성
+from django.urls import  include
+
+urlpatterns = [
+    # 다른 URL 패턴들...
+    path('accounts/', include('accounts.urls')),
+]
+```
+
+#### travel_blog/urls.py
+연결할 앱의 url 파일을 열어 `accounts`앱의 URL을 추가합니다.
+```python
+# 이어서 작성
+urlpatterns = [
+    # 다른 URL 패턴들...
+    path('accounts/', include('accounts.urls')), # 추가된 코드
+]
+```
+
+### Template 설정
+#### login
+(`login.html`) 로그인 화면을 보여주는 템플릿을 `accounts/templates/accounts` 폴더에 생성합니다.
+CSRF토큰을 사용하여 보안을 유지하며, 폼 필드를 자동으로 렌더링합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>로그인</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>로그인 페이지</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">로그인</button>
+    </form>
+</body>
+</html>
+
+```
+#### logout
+(`logout.html`) 로그인 화면을 보여주는 템플릿을 `accounts/templates/accounts` 폴더에 생성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>로그아웃</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>로그아웃되었습니다.</h1>
+    <p>로그아웃이 완료되었습니다. <a href="{% url 'login' %}">로그인 페이지로 돌아가기</a></p>
+</body>
+</html>
+```
+
+### Update 
+위의 과정에서 생성된 login, logout 화면을 `accounts/urls.py`에서 받을 수 있게 수정하고, `blog` 화면에 보여지도록 개선합니다.
+#### accounts/urls.py
+
+### URL 설정
+#### accounts/urls.py
+기존에 작성한 `accounts/urls.py` 파일에 `template_name=` 코드를 추가하여 로그인과 로그아웃 html 파일 경로를 설정합니다.
+```python
+urlpatterns = [
+    # 생략
+    path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html'), name='login'),#추가된 코드
+    path('logout/', auth_views.LogoutView.as_view(template_name='accounts/logout.html'), name='logout'), #추가된 코드
+]
+```
+
+#### blog/post_list.html
+사용자 계정과 관련된 페이지로의 링크를 추가합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 목록</title>
+</head>
+<body>
+    <h1>게시글 목록</h1>
+    
+    <!-- 사용자 계정 관련 링크 추가 -->
+    <div>
+        <a href="{% url 'signup' %}">회원가입</a> |
+        <a href="{% url 'login' %}">로그인</a> |
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">로그아웃</button>
+        </form>
+    </div>
+
+    <ul>
+        {% for post in posts %}
+            <li>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                <a href="{% url 'post_update' post.pk %}">수정</a>
+                <a href="{% url 'post_delete' post.pk %}">삭제</a>
+            </li>
+        {% empty %}
+            <li>게시글이 없습니다.</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'post_create' %}">새 게시글 작성하기</a>
+</body>
+</html>
+
+```
+>왜 `로그아웃`은 회원가입, 로그인과 다르게 `form` 형태로 작성할까?
+> 회원가입(`signup.html`)과 로그인(`login.html`)은 `{% csrf_token %}` 코드가 입력되어 사용자(토큰) 일치 여부를 확인할 수 있습니다. 그러나 `logout.html`에는 해당 과정이 작성되어 있지 않습니다.
+>
+> 또한, 로그아웃 처리는 POST 요청을 통해 이루어집니다. 회원가입, 로그인과 동일하게 `<a href = >` 형태로 받게되면 GET 요청으로 로그아웃으로 시도하며 `405 Methoed Not Allowed` 오류가 발생합니다.
+>
+> 따라서 로그아웃 링크를 `<form>`을 사용하여 POST 요청을 보내 로그아웃 과정을 진행합니다.
 
 
+## 라. setting
+### settings.py 설정
+#### INSTALLED_APPS
+마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
+`travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `accounts`앱을 연결합니다.
+
+```python
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "main",
+    "blog",
+    "accounts",     # 추가된 코드
+]
+```
+
+#### REDIRECT_URL
+사용자가 로그인하거나 로그아웃한 후 보여질 URL을 지정합니다.
+
+여기서는 게시글 목록확인 및 CRUD 제한 기능을 확인하기 위하여 `/blog/`로 URL을 지정합니다.
+
+```python
+LOGIN_REDIRECT_URL = '/blog/'
+LOGOUT_REDIRECT_URL = '/blog/'
+```
+
+> **`REDIRECT_URL`**
+> 
+> REDIRECT_URL은 웹 애플리케이션에서 사용자가 특정 화면이나 동작을 수행한 후 자동으로 다른 화면으로 이동하도록 하는 URL을 지정할 때 사용합니다.
+> 
+> 기본 설정은 `'/'` 명령어를 사용하며 기본 화면으로 돌아가도록 합니다. 특정 화면을 보여주고 싶은 경우, 해당 화면을 볼 수 있도록 설정할 수 있습니다.
+> 여기서는 `'/'` 으로 설정할 경우 "입장하기"화면이 보이는 기본화면으로 이동합니다. 만약 `'/blog/'` 로 설정할 경우 글 목록이 보이는 화면으로 이동합니다.
 
 
+## 마. 서버 실행 및 결과 확인
+모든 설정이 완료된 후 저장 및 서버를 실행합니다.
+```shell
+python manage.py runserver
+```
+
+다음 URL로 이동하여 결과를 확인합니다.
+```
+http://127.0.0.1:8000/
+```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 6. 로그인/로그아웃
 ## 사용자 계정
 ## 인증
 ## 권한 
 ### 사용자 권한
 ### 관리자 권한
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

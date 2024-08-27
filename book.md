@@ -30,8 +30,8 @@ code .
 ### 2) 개발환경 셋팅
 동일한 개발환경과 프로그램 버전을 사용하여 프로젝트를 진행하기 위하여 가상환경을 사용합니다. 필요한 패키지의 동일한 버전을 사용하여 코드 충돌 등을 방지합니다.
 
-#### 가상환경
-##### 가상환경 생성
+#### 가) 가상환경
+##### (1) 가상환경 생성
  
  VSCode에서 터미널 창을 엽니다. 단축키는 `ctrl + shift + ~` 입니다.
  열린 터미널 창에 아래의 명령어를 입력하여 가상환경을 생성합니다.
@@ -48,7 +48,7 @@ code .
 > 가상환경을 설정할 때 사용하는 폴더의 이름으로 기능적인 차이는 없습니다. 사용자의 선호에 따라 선택됩니다.
 > 가상환경 폴더를 명확하게 하고 싶은 경우 `venv`를 사용하며, 폴더를 숨김처리 하여 목록에서 눈에 덜 띄게 하고 싶은 경우 `.venv`를 사용합니다.
 
-##### 가상환경 활성화
+##### (2) 가상환경 활성화
 터미널 창에 아래의 명령어를 입력하여 가상환경을 활성화합니다.
 ```shell
 # window 버전
@@ -56,21 +56,21 @@ code .
 ```
 터미널 경로 앞에 가상 환경 이름이 표시되었는지 확인합니다.
 
-##### 가상환경 비활성화
+##### (3) 가상환경 비활성화
 활성화한 가상환경을 더이상 사용하고 싶지 않은 경우, 아래의 명령어를 입력하여 가상환경을 끕니다.
 ```shell
 # window 버전
 deactivate
 ```
 
-#### Django 설치
-##### 패키지 설치
+#### 나) Django 설치
+##### (1) 패키지 설치
 Django를 활용한 프로젝트를 개발하기 위하여 아래의 명령어를 입력하여 Django 패키지를 다운로드 합니다.
 (패키기 설치 전 가상환경이 활성화되어있는지 터미널 경로 앞에 가상 환경 이름 표시 여부를 확인 후 패키지 설치를 진행합니다.)
 ```shell
 pip install django
 ```
-##### 설치 결과 확인
+##### (2) 설치 결과 확인
 Django 패키지가 정상적으로 설치되었는지 확인하기 위하여 설치된 패키지 리스트와 패키지 버전을 확인합니다.
 
 **설치된 패키지 리스트 확인**
@@ -96,8 +96,8 @@ django-admin --version # 5.1
 > >```
 
 
-#### 프로젝트
-##### 프로젝트 생성
+#### 다) 프로젝트
+##### (1) 프로젝트 생성
 Django가 정상적으로 설치된 것이 확인 후 터미널 창에 아래 명령어를 입력하여 프로젝트를 생성합니다.
 ```shell
 django-admin startproject travel_blog .
@@ -108,7 +108,7 @@ django-admin startproject travel_blog .
 - `travel_blog .`은 현재 폴더에 직접 생성됩니다. 추가적인 상위 폴더가 만들어지지 않고, 프로젝트 핵심 파일들이 바로 생성됩니다. 즉, 경로는 `travel_blog`가 됩니다.
 
 
-##### 프로젝트 설정
+##### (2) 프로젝트 설정
 Django 프로젝트를 생헌한 후, 프로젝트를 실제로 사용하기 전 여러 가지 설정과 구정을 진행합니다.
 - **`DEBUG`** : 개발 중에는 `DEBUG = True`로 설정하지만 배포 시에는 반드시 `False`로 설정합니다.
 - **`ALLOWED_HOST`** : 배포 환경에서 서용할 도메인이나 IP 주소를 설정합니다. 
@@ -116,7 +116,7 @@ Django 프로젝트를 생헌한 후, 프로젝트를 실제로 사용하기 전
 - **`LANGUAGE_CODE`** : 프로젝트의 기본 언어를 설정합니다. `ko-kr`로 설정합니다.
 - **`TIME_ZONE`** : 프로젝트의 시간대를 설정합니다. `Asia/Seoul`로 설정합니다.
 
-#####  마이그레이트
+##### (3) 마이그레이트
 Django가 기본적으로 제공하는 앱(`auth`, `admin`, `contenttype`, `sessions` 등)들의 데이터베이스 테이블을 설정하기 위하여 마이그레이트를 실행합니다.
 ```shell
 python manage.py migrate
@@ -145,19 +145,19 @@ python manage.py createsuperuser
 모든 정보를 올바르게 입력하면, "Superuwer created successfully."라는 메세지가 나타나며, 관리자 계정이 생성됩니다.
 
 ## 다. 계정 활성화 및 관리자 페이지
-### 서버 실행
+### 1) 서버 실행
 관리자 계정을 활성화화려면 Django 마이그레이션 후 개발 서버를 실행합니다.
 ```shell
 python manage.py runserver
 ```
 
-### 관리자 페이지
-#### 접속
+### 2) 관리자 페이지
+#### 가) 접속
 관리자 페이지 접속을 위하여 웹 브라우저에서 다음 URL로 이동합니다.
 ```
 http://127.0.0.1:8000/admin/
 ```
-#### 로그인 및 활성화 확인
+#### 나) 로그인 및 활성화 확인
 생성한 관리자 계정의 사용자 이름과 비밀번호로 로그인합니다. 로그인 후, 관리자 대시보드에 접속할 수 있습니다. 여기에서 사용자를 관리하고, 데이터베이스의 모델을 조회하거나 수정할 수 있습니다.
 
 
@@ -171,7 +171,7 @@ python manage.py startapp main
 ```
 
 ## 나. URL 설정
-### main/urls.py
+### 1) main/urls.py
 `main`앱 폴더 안에 `urls.py` 파일을 생성하고 사용자가 웹사이트의 기본 페이지를 접속하였을 때, `home`이라는 함수를 실행하도록 하는 코드를 작성합니다.
 - ` path('', views.home , name = 'home')` : 기본주소(공백은 아무것도 추가되지 않은 상태)에 접속하였을 때, views.py에 있는 home이 실행되어 사용자가 볼 페이지를 결정합니다. 해당 경로는 `home`이라는 이름을 사용하여 다른 파일에서 해당 URL 패턴을 참조할 때 `home`이라는 이름을 사용할 수 있습니다.
 
@@ -184,7 +184,7 @@ urlpatterns = [
 ]
 ```
 
-### travel_blog/urls.py
+### 2) travel_blog/urls.py
 `travel_blog`앱 폴더 안 `urls.py` 에 `main`으로 이동할 수 있도록 urlpattern을 추가합니다.
 
 ```python
@@ -212,11 +212,11 @@ def home(request) :
 
 ## 라. Template 설정
 마지막으로 `home`화면을 생성합니다. 먼저, 앱과 화면을 구축하기 위하여 스타일링은 진행하지 않습니다.
-### 폴더 및 파일 생성
+### 1) 폴더 및 파일 생성
 
 `main`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `main`폴더를 생성하여 `home.html` 파일을 생성합니다. 파일 생성 시 `main/templates/main/home.html` 로 한 번에 작성하면 폴더와 파일이 함께 생성됩니다.
 
-### Template 작성
+### 2) Template 작성
 메인 화면과 "입장하기" 버튼을 포함한 기본 템플릿을 작성합니다.
 
 ```html
@@ -236,8 +236,8 @@ def home(request) :
 </body>
 </html>
 ```
-### setting
-#### INSTALLED_APPS
+### 3) setting
+#### (가) INSTALLED_APPS
 마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
 `travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
 ```python
@@ -251,7 +251,7 @@ INSTALLED_APPS = [
     "main", # 추가된 코드
 ]
 ```
-#### TEMPLATES
+#### (나) TEMPLATES
 Django에서 생성한 `tmeplates`폴더를 알려주는 과정입니다.
 Django가 `BASE_DIR/templates/` 경로를 인식하여 그곳에서 템플릿 파일을 찾을 수 있게 설정합니다.
 ```python
@@ -308,7 +308,6 @@ python manage.py startapp blog
 - 작성글을 구분할 수 있도록 "분류(category)" 기능을 생성합니다.
 - 작성글에는 제목(title), 내용(content) ,분류(category), 작성일(created_at) , 수정일(updated_at)으로 구성되도록 생성합니다.
 
-
 ```python
 from django.db import models
 
@@ -339,7 +338,7 @@ python manage.py migrate
 ## 라. CRUD 기능
 앞서 설계한 모델을 활용하여 글쓰기/읽기/수정/삭제 기능을 구현하는 과정입니다.
 
-### Form 설계
+### 1) Form 설계
 form은 블로그를 방문하여 **글을 작성하는 사용자에게 어떤 정보를 직접 입력받아 글을 보여줄지 설정**하는 과정입니다. 앞에서 설계한 모델을 바탕으로 입력받고자 하는 항목을 설정합니다.
 - 작성글 증 제목(title), 내용(content) ,분류(category)를 사용자가 직접 입력하는 항목으로 설정합니다.
 
@@ -357,11 +356,11 @@ class PostForm(forms.ModelForm) :
 
 
 
-### View 설계
+### 2) View 설계
 다음으로 `blog`앱의 `views.py`에서 뷰를 구현합니다.
 블로그에 작성되어 있는 게시글 목록, 상세 목록, 글 생성, 글 수정, 글 삭제 화면을 구현합니다.
 
-#### 게시글 목록
+#### 가) 게시글 목록
 블로그에 게시 중인 글들을 볼 수 있는 목록 화면을 구현합니다.
 ```python
 from django.shortcuts import render, get_object_or_404, redirect
@@ -372,7 +371,7 @@ def post_list(request):
     return render(request, 'blog/post_list.html', {'posts': posts})
 ```
 
-#### 상세 내용
+#### 나) 상세 내용
 게시 중인 글 하나를 클릭하였을 때, 세세한 내용을 볼 수 있는 화면을 구성합니다.
 ```python
 # 이어서 작성합니다.
@@ -386,7 +385,7 @@ def post_detail(request, pk):
 > 블로그 앱에서 객체는 각 게시번호(pk)에 해당하는 블로그 글 1개를 뜻합니다.
 
 
-#### 글 생성
+#### 다) 글 생성
 게시 중인 글 외 새로운 글을 작성하는 화면을 구성합니다. 이 때 앞에서 설계한 폼(From)을 사용하여 사용자가 입력하는 정보를 받아 데이터베이스에 저장합니다.
 
 글 생성이 완료된 후에는 글 목록으로 돌아가 글 생성 결과를 확인할 수 있도록 설계합니다.
@@ -414,7 +413,7 @@ def post_create(request):
 >단순히 정보를 표시하는 단계(글 목록, 세부 정보)는 기존에 있는 정보에서 변경되는 과정이 없으므로 `redirect` 기능이 필요하지 않습니다.
 
 
-#### 글 수정 
+#### 라) 글 수정 
 게시 중인 글에서 글을 수정하는 화면을 구성합니다. 수정 가능한 범위는 앞에서 설계한 폼(From)으로 제한하며, 글 수정이 완료된 후에는 세부 정보로 돌아가 수정 내용을 확인할 수 있도록 설계합니다.
 ```python
 def post_update(request, pk):
@@ -429,7 +428,7 @@ def post_update(request, pk):
     return render(request, 'blog/post_update.html', {'form': form})
 ```
 
-#### 글 삭제
+#### 마) 글 삭제
 마지막으로 글을 삭제하는 기능입니다.
 
 삭제하고자 하는 글이 존재하는지 확인하는 과정을 거쳐, 글 존재하지 않는 경우 404 오류를 발생시킵니다.
@@ -444,8 +443,8 @@ def post_delete(request, pk):
     return render(request, 'blog/post_delete.html', {'post': post})
 ```
 
-### URL 설정
-#### blog/urls.py
+### 3) URL 설정
+#### 가) blog/urls.py
 `blog`앱 폴더 안에 `urls.py` 파일을 생성하고 사용자가 웹사이트의 기본 페이지를 접속하였을 때, `home`이라는 함수를 실행하도록 하는 코드를 작성합니다.
 ```python
 from django.urls import path
@@ -460,7 +459,7 @@ urlpatterns = [
 ]
 ```
 
-#### travel_blog/urls.py
+#### 나) travel_blog/urls.py
 `travel_blog`앱 폴더 안 `urls.py` 에 `blog`로 이동할 수 있도록 url을 추가합니다.
 
 ```python
@@ -475,12 +474,12 @@ urlpatterns = [
 
 ```
 
-### Template 작성
-#### 폴더 및 파일 생성
+### 4) Template 작성
+#### 가) 폴더 및 파일 생성
 `blog`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `blog`폴더를 생성하여 템플릿 파일을 생성합니다.
 - 생성해야 할 파일 목록(5종) : `post_list.html`,  `post_detail.html`,  `post_create.html`,  `post_update.html`,  `post_delete.html`
 
-#### 글 목록 템플릿
+#### 나) 글 목록 템플릿
 (`post_list.html`) 블로그 게시글 목록을 보여주는 템플릿입니다.
 ```HTML
 <!DOCTYPE html>
@@ -508,7 +507,7 @@ urlpatterns = [
 </html>
 
 ```
-#### 상세 내용 템플릿
+#### 다) 상세 내용 템플릿
 (`post_detail.html`) 상세 내용을 보여주는 템플릿입니다.
 ```HTML
 <!DOCTYPE html>
@@ -529,7 +528,7 @@ urlpatterns = [
 </html>
 ```
 
-#### 글 생성 템플릿
+#### 라) 글 생성 템플릿
 (`post_create.html`) 글 생성 화면을 보여주는 템플릿입니다.
 ```HTML
 <!DOCTYPE html>
@@ -548,7 +547,7 @@ urlpatterns = [
 </body>
 </html>
 ```
-#### 글 수정 템플릿
+#### 마) 글 수정 템플릿
 (`post_update.html`) 글 수정 화면을 보여주는 템플릿입니다.
 ```HTML
 <!DOCTYPE html>
@@ -567,7 +566,7 @@ urlpatterns = [
 </body>
 </html>
 ```
-#### 글 삭제 템플릿
+#### 바) 글 삭제 템플릿
 (`post_delete.html`) 글 삭제 화면을 보여주는 템플릿입니다.
 ```HTML
 <!DOCTYPE html>
@@ -590,7 +589,7 @@ urlpatterns = [
 ## 마. main App 업데이트
 앞서 생성한 `main`앱에서 "입장하기" 버튼을 눌렀을 대 `blog`앱의 블로그 페이지가 표시되도록 설계하는 단계입니다.
 
-### View 업데이트
+### 1) View 업데이트
 `main`앱의 `main/views.py` 파일에서 `enter_blog` 뷰를 추가하여 블로그 페이지로 이동하도록 정의합니다.
 ```python
 # 추가 작성
@@ -599,7 +598,7 @@ def enter_blog(request) :
     return redirect('post_list')
 ```
 
-### URL 업데이트
+### 2) URL 업데이트
 `main`앱의 `main/urls.py` 파일에서 보여지는 화면(redirection)을 처리할 뷰를 추가합니다.
 ```python
 # 추가 작성
@@ -608,7 +607,7 @@ urlpatterns = [
 ]
 ```
 
-### Template 업데이트
+### 3) Template 업데이트
 "입장하기" 버튼을 클릭하였을 때 이동하는 링크를 변경합니다.
 - `main`앱의 `templates/main/home.html` 파일에서 기존에 연결한 'home'에서 'enter_blog'로 변경합니다. 
 ```HTML
@@ -682,7 +681,7 @@ python manage.py startapp accounts
 ```
 
 ## 나. 회원가입 기능 추가
-### Form 설계
+### 1) Form 설계
 회원가입 때 받을 사용자 정보를 
 `accounts`앱에서 `forms.py`파일을 생성 후 코드를 작성합니다.
 ```python
@@ -697,7 +696,7 @@ class SignUpForm(UserCreationForm) :
         model = User
         fields = ('username', 'email', 'password1','password2')
 ```
-### View 설계
+### 2) View 설계
 `forms.py`에서 설계한 `SignUpForm` 받아 회원가입 화면을 보여주는 단계입니다.
 `accounts/views.py` 파일에서 회원가입 후 
 ```python
@@ -716,7 +715,7 @@ def signup(request):
         form = SignUpForm()
     return render(request, 'accounts/signup.html', {'form': form})
 ```
-### URL 설계 
+### 3) URL 설계 
 회원가입 URL 설정을 위하여 `accounts/urls.py` 파일을 생성하고 코드를 작성합니다.
 ```python
 from django.urls import path
@@ -728,11 +727,11 @@ urlpatterns = [
 ]
 ```
 
-### Template 설정
-#### 폴더 및 파일 생성
+### 4) Template 설정
+#### 가) 폴더 및 파일 생성
 `accounts`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `accounts`폴더를 생성하여 `signup.html` 파일을 생성합니다. 파일 생성 시 `accounts/templates/accounts/signup.html` 로 한 번에 작성하면 폴더와 파일이 함께 생성됩니다.
 
-#### Template 작성
+#### 나) Template 작성
 회원가입을 위한 기본 화면을 작성합니다.
 ```HTML
 <!DOCTYPE html>
@@ -763,8 +762,8 @@ urlpatterns = [
 
 ## 다. 로그인/로그아웃
 
-### URL 설정
-#### accounts/urls.py
+### 1) URL 설정
+#### 가) accounts/urls.py
 기존에 작성한 `accounts/urls.py` 파일에 로그인과 로그아웃 url 코드를 작성합니다.
 ```python
 from django.urls import path
@@ -778,7 +777,7 @@ urlpatterns = [
 ]
 
 ```
-#### blog/urls.py
+#### 나) blog/urls.py
 연결할 앱의 url 파일을 열어 `accounts`앱의 URL을 추가합니다.
 ```python
 # 이어서 작성
@@ -790,7 +789,7 @@ urlpatterns = [
 ]
 ```
 
-#### travel_blog/urls.py
+#### 다) travel_blog/urls.py
 연결할 앱의 url 파일을 열어 `accounts`앱의 URL을 추가합니다.
 ```python
 # 이어서 작성
@@ -800,8 +799,8 @@ urlpatterns = [
 ]
 ```
 
-### Template 설정
-#### login
+### 2) Template 설정
+#### 가) login
 (`login.html`) 로그인 화면을 보여주는 템플릿을 `accounts/templates/accounts` 폴더에 생성합니다.
 CSRF토큰을 사용하여 보안을 유지하며, 폼 필드를 자동으로 렌더링합니다.
 ```HTML
@@ -822,7 +821,7 @@ CSRF토큰을 사용하여 보안을 유지하며, 폼 필드를 자동으로 �
 </html>
 
 ```
-#### logout
+#### 나) logout
 (`logout.html`) 로그인 화면을 보여주는 템플릿을 `accounts/templates/accounts` 폴더에 생성합니다.
 ```HTML
 <!DOCTYPE html>
@@ -838,12 +837,10 @@ CSRF토큰을 사용하여 보안을 유지하며, 폼 필드를 자동으로 �
 </html>
 ```
 
-### Update 
+### 3) Update 
 위의 과정에서 생성된 login, logout 화면을 `accounts/urls.py`에서 받을 수 있게 수정하고, `blog` 화면에 보여지도록 개선합니다.
-#### accounts/urls.py
 
-### URL 설정
-#### accounts/urls.py
+#### 가) URL 설정
 기존에 작성한 `accounts/urls.py` 파일에 `template_name=` 코드를 추가하여 로그인과 로그아웃 html 파일 경로를 설정합니다.
 ```python
 urlpatterns = [
@@ -853,7 +850,7 @@ urlpatterns = [
 ]
 ```
 
-#### blog/post_list.html
+#### 나) blog/post_list.html
 사용자 계정과 관련된 페이지로의 링크를 추가합니다.
 ```HTML
 <!DOCTYPE html>
@@ -901,8 +898,8 @@ urlpatterns = [
 
 
 ## 라. setting
-### settings.py 설정
-#### INSTALLED_APPS
+### 1) settings.py 설정
+#### 가) INSTALLED_APPS
 마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
 `travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `accounts`앱을 연결합니다.
 
@@ -920,7 +917,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-#### REDIRECT_URL
+#### 나) REDIRECT_URL
 사용자가 로그인하거나 로그아웃한 후 보여질 URL을 지정합니다.
 
 여기서는 게시글 목록확인 및 CRUD 제한 기능을 확인하기 위하여 `/blog/`로 URL을 지정합니다.

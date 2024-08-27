@@ -566,6 +566,7 @@ urlpatterns = [
 </body>
 </html>
 ```
+
 #### 바) 글 삭제 템플릿
 (`post_delete.html`) 글 삭제 화면을 보여주는 템플릿입니다.
 ```HTML
@@ -1042,12 +1043,209 @@ python manage.py runserver
 http://127.0.0.1:8000/
 ```
 
+# 7. 사용자 인증
+기존에 작성된 CRUD 기능에서 로그인한 사용자만 접근할 수 있도록 권한을 설정하는 단계입니다. DJango의 사용자 인증 시스템을 활용하여 접근을 제어합니다.
 
-## 사용자 계정
-## 인증
-## 권한 
-### 사용자 권한
-### 관리자 권한
+## 가. Model 업데이트
+### 1) Medel에 작성자 필드 추가
+먼저, 게시글을 작성한 사용자를 기록하기 위하여 앞서 작성한 `Post`모델에 작성자(`author`)필드를 추가합니다.
+```python
+from django.contrib.auth.models import User # 추가된 코드
+from django.db import models
+
+class Category(models.Model) : 
+    name = models.CharField(max_length = 100 , unique = True)
+    def __str__(self) : 
+        return self.name
+
+class Post(models.Model) : 
+    title = models.CharField(max_length = 200)
+    content = models.TextField()
+    category = models.ForeignKey(Category, related_name = 'posts', on_delete = models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add = True)
+    updated_at = models.DateTimeField(auto_now = True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)  # 추가된 코드
+
+    def __str__(self) : 
+        return self.title
+```
+
+### 2) 마이그레이션 생성 및 적용
+모델을 재정의한 후 데이터베이스에 모델을 반영하기 위하여 마이그레이션을 생성하고 적용합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+> **`It is impossible to add a non-nullable field 'author' to post without specifying a default. This is because the database needs something to populate existing rows.
+Please select a fix:` 알림이 뜨는 경우**
+> 
+> 해당 메세지는 Django에서 새로운 필드를 기존 모델에 추가할 때 발생하는 오류입니다. 이를 해결하기 위하여 데이터베이스의 기존 행(데이터)에 새로 추가하는 필드의 값을 제공해야 합니다. (필드를 추가할 때 null = False로 설정되면 해당 필드는 비워둘 수 없기때문에 기존 데이터에 어떤 값으로 채울지를 Django에서 요청합니다.)
+>
+> 기본값(Default) 설정 / Null 허용 / One-off Defult 지정 / DB에서 직접 처리 방법 중 "기본값(Default) 설정"으로 진행합니다.  
+> "1) Provide a one-off default now (will be set on all existing rows with a null value for this column)"  
+> "2) Quit and manually define a default value in models.py."   
+> 답변 중 "2"를 입력 후  
+>
+> `models.py`에서 "author = models.ForeignKey(User, on_delete=models.CASCADE, default=1) " 로 코드를 변경 후 재진행합니다. 
+>
+
+## 나. View에서 사용자 인증 확인
+### 1) 글 작성 제한
+로그인한 사용자만 게시글을 작성할 수 있도록 뷰를 수정합니다.
+`blog/views.py` 파일에서 로그인 데코레이터 기능을 사용할 수 있도록 기능을 가져옵니다. 이후 게시글 작성 정의에 `@login_required` 데코레이터 추가 및 게시글 작성 과정을 보완합니다. 
+
+> 로그인 데코레이터(`@login_required`)는 사용자가 로그인을 하지 않은 경우 로그인 페이지로 이동합니다.
+
+```python
+from django.contrib.auth.decorators import login_required
+
+# post_create 부분을 수정합니다.
+@login_required
+def post_create(request):
+    if request.method == "POST":
+        form = PostForm(request.POST)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            return redirect('post_list')
+    else:
+        form = PostForm()
+    return render(request, 'blog/post_create.html', {'form': form})
+
+```
+
+> **`post.save()`에서 `post = form.save(commit=False)`로 변경한 이유**
+>
+> `post.save()`는 저금통에 돈을 넣는 것과 비슷합니다. 돈을 넣는 순간 돈은 바로 저금통에 들어가는 것처럼, 입력한 데이터가 바로 데이터 베이스에 저장됩니다.
+>
+> `post = form.save(commit=False)`는 돈을 저금통에 넣기 전 손에 들고 있는 것과 같습니다. 손에 들고 있는 돈을 다시 한 번 확인하거나 추가 또는 변경할 수 있습니다. 최종 확인 후 저금통에 돈을 넣는 것처럼 사용자가 데이터를 입력 후 추가 또는 수정의 과정을 거쳐 데이터베이스에 저장됩니다.
+
+### 2) 글 수정 및 삭제 제한
+
+게시글 수정 또는 삭제 기능의 경우 작성자만 접근할 수 있도록 변경합니다.
+```python
+from django.core.exceptions import PermissionDenied
+
+# post_update 부분을 수정합니다.
+@login_required
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.author != request.user:  
+        raise PermissionDenied  
+    
+    if request.method == "POST":
+        form = PostForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        form = PostForm(instance=post)
+    
+    return render(request, 'post_update.html', {'form': form})
+
+# post_delete 부분을 수정합니다.
+@login_required
+def post_delete(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.author != request.user: 
+        raise PermissionDenied  
+    
+    if request.method == "POST":
+        post.delete()
+        return redirect('post_list')
+    
+    return render(request, 'post_confirm_delete.html', {'post': post})
+```
+
+## 다. Template 수정
+템플릿에서는 아래의 내용으로 개선합니다.
+- 상세 내용 화면에서 작성자 정보를 제공합니다.
+- 글 작성 링크를 로그인한 사용자에게만 보여주도록 작성합니다.
+- 수정 및 삭제 링크를 작성자에게만 보여주도록 작성합니다.
+
+### 1) 글 목록 템플릿
+`blog/templates/blog/post_list.html` 파일에서 아래의 내용을 수정합니다. 
+- 로그인한 사용자에게만 글 작성 버튼을 보여줍니다.
+- 작성자와 현재 사용자가 같은 경우 글 수정 및 삭제 버튼을 보여주도록 코드를 추가합니다. 
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 목록</title>
+</head>
+<body>
+    <h1>게시글 목록</h1>
+    <div>
+        <a href="{% url 'signup' %}">회원가입</a> |
+        <a href="{% url 'login' %}">로그인</a> |
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">로그아웃</button>
+        </form>
+    </div>
+
+    <div>
+        <h2>카테고리별 필터링</h2>
+        <ul>
+            <li><a href="{% url 'post_list' %}">전체</a></li>
+            {% for category in categories %}
+                <li><a href="{% url 'posts_by_category' category.id %}">{{ category.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <ul>
+        {% for post in posts %}
+            <li>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                {% if post.author == request.user %}  
+                <a href="{% url 'post_update' post.pk %}">수정</a>
+                <a href="{% url 'post_delete' post.pk %}">삭제</a>
+            {% endif %}            
+            </li>
+        {% empty %}
+            <li>게시글이 없습니다.</li>
+        {% endfor %}
+    </ul>
+
+    {% if user.is_authenticated %}
+        <a href="{% url 'post_create' %}">새 게시글 작성하기</a>
+    {% endif %}
+</body>
+</html>
+
+
+```
+
+### 2) 상세 내용 템플릿
+`blog/templates/blog/post_detail.html` 파일에 작성자 정보를 제공하는 코드를 추가합니다. 또한, 로그인한 사용자에게만 글 작성 버튼을 보여주고, 작성자와 현재 사용자가 같은 경우 글 수정 및 삭제 버튼을 보여주도록 코드를 추가합니다. 
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.content }}</p>
+    <p>카테고리: {{ post.category.name }}</p>
+    <p>작성자: {{ post.author }}</p>
+    <p>게시일: {{ post.created_at }}</p>
+    <p>수정일: {{ post.updated_at }}</p>
+    {% if post.author == request.user %}  
+        <a href="{% url 'post_update' post.pk %}">수정</a>
+        <a href="{% url 'post_delete' post.pk %}">삭제</a>
+    {% endif %}
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>
+```
 
 
 
@@ -1095,17 +1293,35 @@ http://127.0.0.1:8000/
 
 
 
+# 8. 댓글
+
+# 9. 생성AI 활용
+
+# 10. 배포
+
+# 11. 추가 기능
+# 사진 업로드
+
+# 게시글 조회수
+
+# 댓글(앞 부분에서 제외 시 추가 기능으로 작성)
+## 댓글 추가
+## 댓글 수정
+## 댓글 삭제
+## 대댓글
+
+# 마이페이지
+## 비밀번호 변경
+## 프로필 수정
+## 닉네임 추가
+
+# 파일 모으기
+
+# 번역
 
 
-# 7. 댓글
 
-# 8. 생성AI 활용
-
-# 9. 배포
-
-
-# 10. 참고
-
+# 12. 참고
 ## 가. URL 패턴 확인
 `django-extensions` 패키지를 활용하여 URL 패턴을 확인할 수 있습니다.
 먼저, 패키지를 설치 합니다.

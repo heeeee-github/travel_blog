@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.content }}</p>
+    <p>카테고리: {{ post.category.name }}</p>
+    <p>게시일: {{ post.created_at }}</p>
+    <p>수정일: {{ post.updated_at }}</p>
+    <a href="{% url 'post_update' post.pk %}">수정</a>
+    <a href="{% url 'post_delete' post.pk %}">삭제</a>
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>

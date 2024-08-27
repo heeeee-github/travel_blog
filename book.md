@@ -173,7 +173,7 @@ python manage.py startapp main
 ## 나. URL 설정
 ### main/urls.py
 `main`앱 폴더 안에 `urls.py` 파일을 생성하고 사용자가 웹사이트의 기본 페이지를 접속하였을 때, `home`이라는 함수를 실행하도록 하는 코드를 작성합니다.
-- ` path("", views.home , name = 'home')` : 기본주소(공백은 아무것도 추가되지 않은 상태)에 접속하였을 때, views.py에 있는 home이 실행되어 사용자가 볼 페이지를 결정합니다. 해당 경로는 `home`이라는 이름을 사용하여 다른 파일에서 해당 URL 패턴을 참조할 때 `home`이라는 이름을 사용할 수 있습니다.
+- ` path('', views.home , name = 'home')` : 기본주소(공백은 아무것도 추가되지 않은 상태)에 접속하였을 때, views.py에 있는 home이 실행되어 사용자가 볼 페이지를 결정합니다. 해당 경로는 `home`이라는 이름을 사용하여 다른 파일에서 해당 URL 패턴을 참조할 때 `home`이라는 이름을 사용할 수 있습니다.
 
 ```python
 from django.urls import path
@@ -184,8 +184,8 @@ urlpatterns = [
 ]
 ```
 
-### travle_blog/urls.py
-`travel_blog`앱 폴더 안에 `urls.py` 파일을 생성하고 사용자가 웹사이트의 기본 페이지를 접속하였을 때, `home`이라는 함수를 실행하도록 하는 코드를 작성합니다.
+### travel_blog/urls.py
+`travel_blog`앱 폴더 안 `urls.py` 에 `main`으로 이동할 수 있도록 url을 추가합니다.
 
 ```python
 from django.contrib import admin
@@ -212,7 +212,7 @@ def home(request) :
 
 ## 라. Template 설정
 마지막으로 `home`화면을 생성합니다. 먼저, 앱과 화면을 구축하기 위하여 스타일링은 진행하지 않습니다.
-### 폴더 생성
+### 폴더 및 파일 생성
 
 `main`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `main`폴더를 생성하여 `home.html` 파일을 생성합니다. 파일 생성 시 `main/templates/main/home.html` 로 한 번에 작성하면 폴더와 파일이 함께 생성됩니다.
 
@@ -237,6 +237,7 @@ def home(request) :
 </html>
 ```
 ### setting
+#### INSTALLED_APPS
 마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
 `travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
 ```python
@@ -250,7 +251,28 @@ INSTALLED_APPS = [
     "main", # 추가된 코드
 ]
 ```
-
+#### TEMPLATES
+Django에서 생성한 `tmeplates`폴더를 알려주는 과정입니다.
+Django가 `BASE_DIR/templates/` 경로를 인식하여 그곳에서 템플릿 파일을 찾을 수 있게 설정합니다.
+```python
+import os
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [os.path.join(BASE_DIR, 'templates')], # 추가된 코드
+        # "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+```
 
 ## 마. 서버 실행 및 결과 확인
 모든 설정이 완료된 후 저장 및 서버를 실행합니다.
@@ -267,16 +289,430 @@ http://127.0.0.1:8000/
 
 
 
-# 5. 게시글
-## 글 작성
-## 글 읽기
-## 글 수정
-## 글 삭제
+# 5. 블로그
+
+## 가. 메인 앱 생성
+본격적으로 블로그 글과 관련된 기능을 설계하는 단계입니다.
+블로그를 관리할 새로운 앱 `blog`을 생성합니다.
+
+```shell
+python manage.py startapp blog
+```
+## 나. Model 설정
+블로그의 핵심인 **블로그 글에서 보여줄 정보(데이터)** 를 정의하는 과정입니다. 블로그 방문객들에게 글을 전달하기 위해 필요한 모든 정보를 포함합니다. 
+
+`blog`앱의 `models.py`에서 블로그 글을 표현할 모델, 즉 데이터베이스에 저장할 구조를 정의합니다.
+
+여기서는 아래와 같이 모델을 정의하였습니다.
+- 작성글을 구분할 수 있도록 "분류(category)" 기능을 생성합니다.
+- 작성글에는 제목(title), 내용(content) ,분류(category), 작성일(created_at) , 수정일(updated_at)으로 구성되도록 생성합니다.
+
+
+```python
+from django.db import models
+
+class Category(models.Model) : 
+    name = models.CharField(max_length = 100 , unique = True)
+    def __str__(self) : 
+        return self.name
+
+class Post(models.Model) : 
+    title = models.CharField(max_length = 200)
+    content = models.TextField()
+    category = models.ForeignKey(Category, related_name = 'posts', on_delete = models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add = True)
+    updated_at = models.DateTimeField(auto_now = True)
+
+    def __str__(self) : 
+        return self.title
+```
+
+## 다. 마이그레이션 생성 및 적용
+모델을 정의한 후 데이터베이스에 모델을 반영하기 위하여 마이그레이션을 생성하고 적용합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+
+## 라. CRUD 기능
+앞서 설계한 모델을 활용하여 글쓰기/읽기/수정/삭제 기능을 구현하는 과정입니다.
+
+### Form 설계
+form은 블로그를 방문하여 **글을 작성하는 사용자에게 어떤 정보를 직접 입력받아 글을 보여줄지 설정**하는 과정입니다. 앞에서 설계한 모델을 바탕으로 입력받고자 하는 항목을 설정합니다.
+- 작성글 증 제목(title), 내용(content) ,분류(category)를 사용자가 직접 입력하는 항목으로 설정합니다.
+
+`blog`앱에서 `forms.py`파일을 생성 후 코드를 작성합니다.
+
+```python
+from django import forms
+from .models import Post
+
+class PostForm(forms.ModelForm) : 
+    class Meta : 
+        model = Post 
+        fields = ['title', 'content', 'category']
+```
+
+
+
+### View 설계
+다음으로 `blog`앱의 `views.py`에서 뷰를 구현합니다.
+블로그에 작성되어 있는 게시글 목록, 상세 목록, 글 생성, 글 수정, 글 삭제 화면을 구현합니다.
+
+#### 게시글 목록
+블로그에 게시 중인 글들을 볼 수 있는 목록 화면을 구현합니다.
+```python
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Post, Category
+
+def post_list(request):
+    posts = Post.objects.all()
+    return render(request, 'blog/post_list.html', {'posts': posts})
+```
+
+#### 상세 내용
+게시 중인 글 하나를 클릭하였을 때, 세세한 내용을 볼 수 있는 화면을 구성합니다.
+```python
+# 이어서 작성합니다.
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    return render(request, 'blog/post_detail.html', {'post': post})
+```
+> `get_object_or_404` 란?
+>
+> Django에서 특정 객체를 데이터베이스에서 조회할 때, 해당 객체가 존재하지 않을 경우 HTTP404오류를 자동으로 발생시키는 유용한 내장함수 입니다. 
+> 블로그 앱에서 객체는 각 게시번호(pk)에 해당하는 블로그 글 1개를 뜻합니다.
+
+
+#### 글 생성
+게시 중인 글 외 새로운 글을 작성하는 화면을 구성합니다. 이 때 앞에서 설계한 폼(From)을 사용하여 사용자가 입력하는 정보를 받아 데이터베이스에 저장합니다.
+
+글 생성이 완료된 후에는 글 목록으로 돌아가 글 생성 결과를 확인할 수 있도록 설계합니다.
+```python
+# 이어서 작성합니다.
+from django.shortcuts import redirect # redirect를 추가합니다.
+from .forms import PostForm  # PorstForm을 활용합니다.
+
+def post_create(request):
+    if request.method == "POST":
+        form = PostForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('post_list')
+    else:
+        form = PostForm()
+    return render(request, 'blog/post_create.html', {'form': form})
+```
+> `redirect` 란?
+>
+> Django의 `shortcuts` 모듈에서 제공하는 함수로 사용자가 다른 페이지로 이동시키는 기능입니다. 
+> 
+>사용자가 데이터를 제출(글 작성), 상태 변경(글 수정), 작업 완료(글 삭제) 등 데이터 입력을 처리하거나 상태를 변경하는 경우 다른 페이지로 이동(`redirect`)시킵니다.
+>
+>단순히 정보를 표시하는 단계(글 목록, 세부 정보)는 기존에 있는 정보에서 변경되는 과정이 없으므로 `redirect` 기능이 필요하지 않습니다.
+
+
+#### 글 수정 
+게시 중인 글에서 글을 수정하는 화면을 구성합니다. 수정 가능한 범위는 앞에서 설계한 폼(From)으로 제한하며, 글 수정이 완료된 후에는 세부 정보로 돌아가 수정 내용을 확인할 수 있도록 설계합니다.
+```python
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.method == "POST":
+        form = PostForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect('post_detail', pk=pk)
+    else:
+        form = PostForm(instance=post)
+    return render(request, 'blog/post_form.html', {'form': form})
+```
+
+#### 글 삭제
+마지막으로 글을 삭제하는 기능입니다.
+
+삭제하고자 하는 글이 존재하는지 확인하는 과정을 거쳐, 글 존재하지 않는 경우 404 오류를 발생시킵니다.
+
+삭제하려는 글이 존재하는 경우 "삭제 확인 화면"을 사용자에게 보여주도록 합니다. 이후 글 삭제가 완료되면 글 목록 화면으로 이동하도록 설계합니다.
+```python
+def post_delete(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    if request.method == "POST":
+        post.delete()
+        return redirect('post_list')
+    return render(request, 'blog/post_confirm_delete.html', {'post': post})
+```
+
+### URL 설정
+#### blog/urls.py
+`blog`앱 폴더 안에 `urls.py` 파일을 생성하고 사용자가 웹사이트의 기본 페이지를 접속하였을 때, `home`이라는 함수를 실행하도록 하는 코드를 작성합니다.
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.post_list, name='post_list'),
+    path('post/<int:pk>/', views.post_detail, name='post_detail'),
+    path('post/new/', views.post_create, name='post_create'),
+    path('post/<int:pk>/edit/', views.post_update, name='post_update'),
+    path('post/<int:pk>/delete/', views.post_delete, name='post_delete'),
+]
+```
+
+#### travel_blog/urls.py
+`travel_blog`앱 폴더 안 `urls.py` 에 `blog`로 이동할 수 있도록 url을 추가합니다.
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('main.urls')), 
+    path('blog/', include('blog.urls')), # 추가된 코드
+]
+
+```
+
+### Template 작성
+#### 폴더 및 파일 생성
+`blog`앱 폴더 내에 `templates` 폴더를 만들고, 그 안에 `blog`폴더를 생성하여 템플릿 파일을 생성합니다.
+- 생성해야 할 파일 목록(5종) : `post_list.html`,  `post_detail.html`,  `post_create.html`,  `post_update.html`,  `post_delete.html`
+
+#### 글 목록 템플릿
+(`post_list.html`) 블로그 게시글 목록을 보여주는 템플릿입니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 목록</title>
+</head>
+<body>
+    <h1>게시글 목록</h1>
+    <ul>
+        {% for post in posts %}
+            <li>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                <a href="{% url 'post_update' post.pk %}">수정</a>
+                <a href="{% url 'post_delete' post.pk %}">삭제</a>
+            </li>
+        {% empty %}
+            <li>게시글이 없습니다.</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'post_create' %}">새 게시글 작성하기</a>
+</body>
+</html>
+
+```
+#### 상세 내용 템플릿
+(`post_detail.html`) 상세 내용을 보여주는 템플릿입니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.content }}</p>
+    <p>카테고리: {{ post.category.name }}</p>
+    <p>게시일: {{ post.created_at }}</p>
+    <p>수정일: {{ post.updated_at }}</p>
+    <a href="{% url 'post_update' post.pk %}">수정</a>
+    <a href="{% url 'post_delete' post.pk %}">삭제</a>
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>
+```
+
+#### 글 생성 템플릿
+(`post_create.html`) 글 생성 화면을 보여주는 템플릿입니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>글 작성</title>
+</head>
+<body>
+    <h1>글 작성</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}  <!-- 폼을 단락으로 렌더링 -->
+        <button type="submit">저장</button>  
+    </form>
+    <a href="{% url 'post_list' %}">목록</a> 
+</body>
+</html>
+```
+#### 글 수정 템플릿
+(`post_update.html`) 글 수정 화면을 보여주는 템플릿입니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% if form.instance.pk %}수정{% else %}작성{% endif %} 게시</title>
+</head>
+<body>
+    <h1>{% if form.instance.pk %}수정{% else %}작성{% endif %} 게시</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">저장</button>
+    </form>
+    <a href="{% url 'post_list' %}">목록</a>
+</body>
+</html>
+```
+#### 글 삭제 템플릿
+(`post_delete.html`) 글 삭제 화면을 보여주는 템플릿입니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>글 삭제</title>
+</head>
+<body>
+    <h1>글 삭제</h1>
+    <p>해당 글을 삭제하시겠습니까? "{{ post.title }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">삭제</button>
+    </form>
+    <a href="{% url 'post_list' %}">취소</a>
+</body>
+</html>
+```
+
+## 마. main App 업데이트
+앞서 생성한 `main`앱에서 "입장하기" 버튼을 눌렀을 대 `blog`앱의 블로그 페이지가 표시되도록 설계하는 단계입니다.
+
+### View 업데이트
+`main`앱의 `main/views.py` 파일에서 `enter_blog` 뷰를 추가하여 블로그 페이지로 이동하도록 정의합니다.
+```python
+# 추가 작성
+from django.shortcuts import redirect
+def enter_blog(request) : 
+    return redirect('post_list')
+```
+
+### URL 업데이트
+`main`앱의 `main/urls.py` 파일에서 보여지는 화면(redirection)을 처리할 뷰를 추가합니다.
+```python
+# 추가 작성
+urlpatterns = [
+    path('enter_blog/', views.enter_blog, name='enter_blog'),  # 블로그로 이동하는 URL
+]
+```
+
+### Template 업데이트
+"입장하기" 버튼을 클릭하였을 때 이동하는 링크를 변경합니다.
+- `main`앱의 `templates/main/home.html` 파일에서 기존에 연결한 'home'에서 'enter_blog'로 변경합니다. 
+```HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 페이지</title>
+</head>
+<body>
+    <h1>환영합니다!</h1>
+    <p>여기는 메인 페이지입니다.</p>
+    <!-- 아래 부분을 'home'에서 'enter_blog'로 변경 -->
+    <a href="{% url 'enter_blog' %}"> 
+        <button>입장하기</button>
+    </a>
+</body>
+</html>
+```
+
+## 바. 프로젝트 ~ 앱 연결
+### setting
+마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
+`travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
+```python
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "main", 
+    "blog",  # 추가된 코드
+]
+```
+
+## 사. 서버 실행 및 결과 확인
+모든 설정이 완료된 후 저장 및 서버를 실행합니다.
+```shell
+python manage.py runserver
+```
+
+다음 URL로 이동하여 결과를 확인합니다.
+```
+http://127.0.0.1:8000/
+```
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # 6. 로그인/로그아웃
 ## 사용자 계정
 ## 인증
+## 권한 
+### 사용자 권한
+### 관리자 권한
+
+
 
 # 7. 댓글
 
@@ -285,3 +721,42 @@ http://127.0.0.1:8000/
 # 9. 배포
 
 
+# 10. 참고
+
+## URL 패턴 확인
+`django-extensions` 패키지를 활용하여 URL 패턴을 확인할 수 있습니다.
+먼저, 패키지를 설치 합니다.
+```shell
+pip install django-extensions
+```
+다음으로 `settings.py` 파일에서 `INSTALLED_APPS` 부분에 `django_extensions`를 추가합니다. 패키지 명에는 하이픈(-)을 사용하지만 설정파일에 추가하는 이름에는 언더바(_)로 입력해야하는 점을 주의합니다.
+
+마지막으로 명령어를 작성하여 URL 패턴을 확인합니다.
+```shell
+python manage.py show_urls
+```
+
+## git commit imoji
+### 주요 이모지와 의미
+| 이모지  | 코드 (`:`)        | 의미                              |
+|---------|-------------------|-----------------------------------|
+| 🎉      | `:tada:`          | 새로운 프로젝트 시작, 초기 커밋   |
+| ✨      | `:sparkles:`      | 새로운 기능 추가                  |
+| 🐛      | `:bug:`           | 버그 수정                         |
+| 🔨      | `:hammer:`        | 코드 리팩토링                     |
+| 📝      | `:memo:`          | 문서 추가 또는 수정               |
+| 💄      | `:lipstick:`      | UI 또는 스타일 관련 수정          |
+| 🚀      | `:rocket:`        | 성능 개선                         |
+| 🔥      | `:fire:`          | 코드나 파일 삭제                  |
+| 🚑️     | `:ambulance:`     | 긴급 수정                         |
+| 🔧      | `:wrench:`        | 설정 파일 수정                    |
+| 🚨      | `:rotating_light:`| 린트 규칙 등 코드 규칙 관련 수정  |
+| 🔒      | `:lock:`          | 보안 문제 해결                    |
+| ♻️      | `:recycle:`       | 코드 구조 변경 (리팩토링)         |
+| ➕      | `:heavy_plus_sign:`| 의존성 추가                      |
+| ➖      | `:heavy_minus_sign:`| 의존성 제거                     |
+| ⬆️      | `:arrow_up:`      | 의존성 버전 업그레이드            |
+| ⬇️      | `:arrow_down:`    | 의존성 버전 다운그레이드          |
+| 🚧      | `:construction:`  | 작업 진행 중 (WIP: Work In Progress) |
+| 🔍      | `:mag:`           | 검색, 탐색 기능 관련 수정         |
+| 💚      | `:green_heart:`   | CI 빌드 통과                      |

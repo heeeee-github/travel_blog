@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% if form.instance.pk %}수정{% else %}작성{% endif %} 게시</title>
+</head>
+<body>
+    <h1>{% if form.instance.pk %}수정{% else %}작성{% endif %} 게시</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">저장</button>
+    </form>
+    <a href="{% url 'post_list' %}">목록</a>
+</body>
+</html>

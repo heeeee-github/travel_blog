@@ -29,11 +29,11 @@
     <ul>
         {% for post in posts %}
             <li>
-                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a>
                 {% if post.author == request.user %}  
-                <a href="{% url 'post_update' post.pk %}">수정</a>
-                <a href="{% url 'post_delete' post.pk %}">삭제</a>
-            {% endif %}            
+                    <a href="{% url 'post_update' post.pk %}">수정</a>
+                    <a href="{% url 'post_delete' post.pk %}">삭제</a>
+                {% endif %}            
             </li>
         {% empty %}
             <li>게시글이 없습니다.</li>

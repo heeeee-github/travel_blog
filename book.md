@@ -586,6 +586,7 @@ urlpatterns = [
 </body>
 </html>
 ```
+
 ## 마. 카테고리 검색 기능
 카테고리를 선택하여 해당 카테고리에 속하는 게시물만 필터링하는 기능을 생성합니다. 
 
@@ -617,22 +618,24 @@ urlpatterns = [
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ category.name }} Posts</title>
+    <title>{{ category.name }} 게시글 목록</title>
 </head>
 <body>
-    <h1>Posts in {{ category.name }}</h1>
+    <h1>게시글 목록 in {{ category.name }}</h1>
 
     {% if posts %}
         <ul>
             {% for post in posts %}
-                <li>{{ post.title }}</li>
+                <li>
+                    <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p>No posts in this category.</p>
+        <p>게시글이 없습니다.</p>
     {% endif %}
 
-    <a href="{% url 'post_list' %}">Back to All Posts</a>
+    <a href="{% url 'post_list' %}">목록으로 돌아가기</a>
 </body>
 </html>
 ```
@@ -683,7 +686,66 @@ def post_list(request):
 > **`post_list`** 는 블로그의 모든 글을 보여주며, **`posts_by_category`** 는 선택한 카테고리애 해당하는 글들만 필터링이 되어 화면에 보여줍니다.
 
 
-## 바. main App 업데이트
+
+## 바. 시간순 게시글 정렬 기능
+게시된 글들을 최근 작성일순으로 정렬하는 기능을 추가합니다.
+
+### 1) View 수정
+#### 가) post_list
+`blog/views.py`의 `post_list` 정의에 글을 최근 작성일 순으로 정리하는 코드를 추가합니다.
+- `order_by('-created_at')` : 작성일(`created_at`)의 역순(`-`)인 최근일자부터 정렬하는 코드입니다.
+```python
+
+def post_list(request):
+    posts = Post.objects.all().order_by('-created_at') # 수정된 코드
+    categories = Category.objects.all()  
+    return render(request, 'blog/post_list.html', {'posts': posts, 'categories': categories})
+
+
+```
+
+#### 나) posts_by_category
+`blog/views.py`의 `posts_by_category` 정의에 글을 최근 작성일 순으로 정리하는 코드를 추가합니다.
+
+```python
+def posts_by_category(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+    posts = Post.objects.filter(category=category).order_by('-created_at') # 수정된 코드
+    return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})
+```
+
+
+### 2) Template 수정
+#### 가) post_list
+`blog/templates/blog/post_list.html`에 글의 작성일을 보여주는 코드를 추가합니다.
+```HTML
+<ul>
+    {% for post in posts %}
+        <li>
+            <!-- 수정된 코드 -->
+            <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a> 
+        </li>
+    {% empty %}
+        <li>게시글이 없습니다.</li>
+    {% endfor %}
+</ul>
+```
+
+#### 나) posts_by_category
+`blog/templates/blog/posts_by_category.html`에 글의 작성일을 보여주는 코드를 추가합니다.
+
+```HTML
+<!-- 수정된 코드 -->
+{% for post in posts %}
+    <li>
+        <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a>
+    </li>
+{% endfor %}
+```
+
+
+
+## 사. main App 업데이트
 앞서 생성한 `main`앱에서 "입장하기" 버튼을 눌렀을 대 `blog`앱의 블로그 페이지가 표시되도록 설계하는 단계입니다.
 
 ### 1) View 업데이트
@@ -726,7 +788,7 @@ urlpatterns = [
 </html>
 ```
 
-## 바. setting
+## 아. setting
 ### INSTALLED_APPS
 마지막으로 Django 프로젝트에 생성한 앱을 연결하는 과정입니다.
 `travel_blog/settings.py`에서 `INSTALLED_APPS` 부분에 `main`앱을 연결합니다.
@@ -743,7 +805,7 @@ INSTALLED_APPS = [
 ]
 ```
 
-## 사. 관리자 사이트 연결
+## 자. 관리자 사이트 연결
 블로그 글을 Django 관리자(admin)화면에서 "Category", "Post" 섹션을 관리할 수 있도록 연결합니다.
 `blog/admin.py` 파일에 아래의 코드를 입력 후 저장합니다.
 ```python
@@ -754,7 +816,7 @@ admin.site.register(Category)
 admin.site.register(Post)
 ```
 
-## 아. 서버 실행 및 결과 확인
+## 차. 서버 실행 및 결과 확인
 모든 설정이 완료된 후 저장 및 서버를 실행합니다.
 ```shell
 python manage.py runserver
@@ -950,16 +1012,8 @@ urlpatterns = [
 #### 나) blog/post_list.html
 사용자 계정과 관련된 페이지로의 링크를 추가합니다.
 ```HTML
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게시글 목록</title>
-</head>
 <body>
     <h1>게시글 목록</h1>
-    
     <!-- 사용자 계정 관련 링크 추가 -->
     <div>
         <a href="{% url 'signup' %}">회원가입</a> |
@@ -969,22 +1023,8 @@ urlpatterns = [
             <button type="submit">로그아웃</button>
         </form>
     </div>
-
-    <ul>
-        {% for post in posts %}
-            <li>
-                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
-                <a href="{% url 'post_update' post.pk %}">수정</a>
-                <a href="{% url 'post_delete' post.pk %}">삭제</a>
-            </li>
-        {% empty %}
-            <li>게시글이 없습니다.</li>
-        {% endfor %}
-    </ul>
-    <a href="{% url 'post_create' %}">새 게시글 작성하기</a>
+    <!-- 생략 -->
 </body>
-</html>
-
 ```
 >왜 `로그아웃`은 회원가입, 로그인과 다르게 `form` 형태로 작성할까?
 > 회원가입(`signup.html`)과 로그인(`login.html`)은 `{% csrf_token %}` 코드가 입력되어 사용자(토큰) 일치 여부를 확인할 수 있습니다. 그러나 `logout.html`에는 해당 과정이 작성되어 있지 않습니다.
@@ -1203,7 +1243,7 @@ def post_delete(request, pk):
     <ul>
         {% for post in posts %}
             <li>
-                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a>
                 {% if post.author == request.user %}  
                 <a href="{% url 'post_update' post.pk %}">수정</a>
                 <a href="{% url 'post_delete' post.pk %}">삭제</a>

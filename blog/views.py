@@ -58,6 +58,6 @@ def post_delete(request, pk):
 
 def posts_by_category(request, category_id):
     category = get_object_or_404(Category, id=category_id)
-    posts = Post.objects.filter(category=category)
+    posts = Post.objects.filter(category=category).order_by('-created_at')
 
     return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})

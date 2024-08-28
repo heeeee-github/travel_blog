@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ category.name }} Posts</title>
+    <title>{{ category.name }} 게시글 목록</title>
 </head>
 <body>
-    <h1>Posts in {{ category.name }}</h1>
+    <h1>게시글 목록 in {{ category.name }}</h1>
 
     {% if posts %}
         <ul>
             {% for post in posts %}
-                <li>{{ post.title }}</li>
+                <li>
+                    <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a>
+                </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p>No posts in this category.</p>
+        <p>게시글이 없습니다.</p>
     {% endif %}
 
-    <a href="{% url 'post_list' %}">Back to All Posts</a>
+    <a href="{% url 'post_list' %}">목록으로 돌아가기</a>
 </body>
 </html>

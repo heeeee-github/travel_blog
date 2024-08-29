@@ -8,13 +8,19 @@
 <body>
     <h1>게시글 목록</h1>
     <div>
+        {% if not request.user.is_authenticated %}
         <a href="{% url 'signup' %}">회원가입</a> |
         <a href="{% url 'login' %}">로그인</a> |
-        <form action="{% url 'logout' %}" method="post" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit">로그아웃</button>
-        </form>
-    </div>
+        {% endif %}
+    
+        {% if request.user.is_authenticated %}
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">로그아웃</button>
+            </form>
+            <a href="{% url 'mypage' request.user.username %}">마이페이지</a>
+        {% endif %}
+        </div>
 
     <div>
         <h2>카테고리별 필터링</h2>

@@ -5,9 +5,28 @@
 </head>
 <body>
     <h1>글 작성</h1>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ form.as_p }}  <!-- 폼을 단락으로 렌더링 -->
+        {{ form.as_p }}
+        
+        <h2>이미지 업로드</h2>
+        {{ image_formset.management_form }}
+        {% for image_form in image_formset %}
+            {{ image_form.as_p }}
+        {% endfor %}
+
+        <h2>비디오 업로드</h2>
+        {{ video_formset.management_form }}
+        {% for video_form in video_formset %}
+            {{ video_form.as_p }}
+        {% endfor %}
+
+        <h2>오디오 업로드</h2>
+        {{ audio_formset.management_form }}
+        {% for audio_form in audio_formset %}
+            {{ audio_form.as_p }}
+        {% endfor %}
+        
         <button type="submit">저장</button>  
     </form>
     <a href="{% url 'post_list' %}">목록</a> 

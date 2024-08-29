@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>댓글 삭제</title>
+</head>
+<body>
+    <h1>댓글 삭제</h1>
+    <p>정말로 댓글을 삭제하시겠습니까?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">삭제</button>
+    </form>
+    <a href="{% url 'post_detail' pk=comment.post.pk %}">취소</a>
+</body>
+</html>

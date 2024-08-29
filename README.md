@@ -2,7 +2,7 @@
 
 **(목표)** Django를 활용한 여행(Travel) 블로그 웹 페이지 제작
 
-**(기간)** 2024.08.26.(월) ~ 2024.08.30.(금), 5일간
+**(기간)** 2024.08.26.(월) ~ 2024.09.1.(일), 7일간
 
 **(역할)** 기획/디자인/개발/배포(1인 프로젝트)
 
@@ -74,34 +74,39 @@ gantt
     글 삭제(작성자)             : done, f3-3, 2024-08-27, 1d
 
 
+    section 파일 업로드
+    영상                   : done, g1, 2024-08-28, 1d
+    음악                   : done, g2, 2024-08-28, 1d
+    이미지                   : done, g3, 2024-08-28, 1d
+
     section 추가 기능 개발
-    글 상세보기                   : done, g1, 2024-08-27, 1d
-    파일 업로드                   : active, g2, 2024-08-28, 1d
-    조회수                      : active, g3, 2024-08-28, 1d
-    글 삭제 후 글 목록 화면      : done, g4, 2024-08-27, 1d
-    삭제글 접근불가 + 404에러   : done, g5, 2024-08-27, 1d
-    게시글 검색(주제, 카테고리)   : done, g6, 2024-08-27, 1d
-    시간순에 따라 게시글 정렬   : active, g7, 2024-08-28, 1d
+    글 상세보기                   : done, h1, 2024-08-27, 1d
+    조회수                      : active, h2, 2024-08-28, 3d
+    글 삭제 후 글 목록 화면      : done, h3, 2024-08-27, 1d
+    삭제글 접근불가 + 404에러   : done, h4, 2024-08-27, 1d
+    게시글 검색(주제, 카테고리)   : done, h5, 2024-08-27, 1d
+    시간순에 따라 게시글 정렬   : done, h6, 2024-08-28, 1d
+    컨텐츠 필터링               : h7, 2024-08-30, 1d
 
-    마이페이지 기능                   : g8, 2024-08-28, 2d
-    비밀번호 변경                    : g8-1, 2024-08-28, 2d
-    프로필 수정                   : g8-1, 2024-08-28, 2d
-    닉네임 추가                    : g8-1, 2024-08-28, 2d
+    마이페이지 기능                   : done,h7, 2024-08-29, 1d
+    비밀번호 변경                    : h7-1, 2024-08-30, 1d
+    프로필 수정                   : done,h7-2, 2024-08-29, 1d
+    닉네임 추가                    : h7-3, 2024-08-30, 1d
 
-    댓글 기능                    : active, g9, 2024-08-28, 2d
-    댓글 추가                    : active, g9-1, 2024-08-28, 2d
-    댓글 수정                    : active, g9-2, 2024-08-28, 2d
-    댓글 삭제                    : active, g9-3, 2024-08-28, 2d
-    대댓글                        : active, g9-4, 2024-08-28, 2d
+    댓글 기능                    : done, h8, 2024-08-29, 1d
+    댓글 추가                    : done, h8-1, 2024-08-29, 1d
+    댓글 수정                    : done, h8-2, 2024-08-29, 1d
+    댓글 삭제                    : done, h8-3, 2024-08-29, 1d
+    답글                        : done, h8-4, 2024-08-29, 2d
     
-    소셜 미디어 연동               : g10, 2024-08-29, 2d
-    좋아요 기능                    : g11, 2024-08-29, 2d
-    북마크 기능                    : g12, 2024-08-29, 2d
+    소셜 미디어 연동               : g9, 2024-08-29, 2d
+    좋아요 기능                    : g10, 2024-08-29, 2d
+    북마크 기능                    : g11, 2024-08-29, 2d
 
-    AI 연동                       : g13, 2024-08-29, 2d
+    AI 연동                       : g12, 2024-08-29, 2d
 
     section 디자인 및 UI/UX 개발
-    기본 템플릿 디자인                       : active, h1, 2024-08-28, 2d
+    기본 템플릿 디자인                       : active, h1, 2024-08-28, 4d
     사용자 프로필 페이지 디자인                 : h2, 2024-08-28, 2d
     반응형 웹 디자인 적용                    : h3, 2024-08-28, 2d
 
@@ -119,7 +124,10 @@ gantt
     프로젝트 평가 및 회고         : j3, 2024-09-02, 1d
 ```
 
-# 04. 웹페이지 구조(Website Structure)
+# 04. 구조도(Structure)
+
+## 웹페이지 구조도
+## 기능 구조도
 ```mermaid
 graph TD
     A[메인 페이지 home] --> B[블로그 입장 페이지 enter_blog]
@@ -147,7 +155,7 @@ graph TD
         J
     end
 
-    classDef default fill:#001d35,stroke:#333,stroke-width:2px;
+    classDef default fill:#ffffff,stroke:#333,stroke-width:2px;
     classDef loggedIn fill:#522064,stroke:#333,stroke-width:2px;
     classDef admin fill:#20645f,stroke:#333,stroke-width:2px;
     class E,F,G loggedIn;
@@ -161,40 +169,62 @@ graph TD
 # 06. ERD(Entity Relationship Diagram)
 ```mermaid
 erDiagram
-    User ||--o{ Post : writes
-    User ||--o{ Comment : writes
-    Post ||--o{ Comment : has
 
-    User {
-        int id PK
-        string username
-        string email
-        string password
-        datetime created_at
-        datetime updated_at
+    Category ||--o| Post : has
+    Post ||--o| Image : includes
+    Post ||--o| Video : includes
+    Post ||--o| Audio : includes
+    Post ||--o| Comment : includes
+    Comment ||--o| Comment : replies_to
+    Post }|--|| Category : belongs_to
+    Post }|--|| User : authored_by
+    Comment }|--|| User : authored_by
+    Profile }|--|| User : has
+
+    Category {
+        integer id PK
+        string name
     }
 
     Post {
-        int id PK "Comment"
-        int user_id FK
+        integer id PK
         string title
         text content
-        string main_file_name
-        string main_file_path
-        string main_file_type
-        int main_file_size
-        json additional_files "Save in json format "
         datetime created_at
         datetime updated_at
     }
 
+    Image {
+        integer id PK
+        string image
+    }
+
+    Video {
+        integer id PK
+        file video
+    }
+
+    Audio {
+        integer id PK
+        file audio
+    }
+
     Comment {
-        int id PK
-        int user_id FK
-        int post_id FK
+        integer id PK
         text content
         datetime created_at
-        datetime updated_at
+    }
+
+    Profile {
+        integer id PK
+        text bio
+        string profile_picture
+        string location
+    }
+
+    User {
+        integer id PK
+        string username
     }
 
 ```
@@ -207,23 +237,23 @@ erDiagram
 
 | 카테고리      | 기능                   | 설명                  | 영상              |
 |---------------|------------------------|-----------------------|-------------------|
-| **메인화면**   | 입장                   | 앱의 시작 화면 | (영상 삽입 예정)   |
-|               | 메인페이지             | 블로그의 주요 페이지 | (영상 삽입 예정)   |
-| **사용자**     | 로그인                 | 사용자의 로그인 절차 | (영상 삽입 예정)   |
-|               | 로그아웃               | 사용자의 로그아웃 절차 | (영상 삽입 예정)   |
+| **메인화면**   | 입장                   | 앱의 시작 화면 |    |
+|               | 메인페이지             | 블로그의 주요 페이지 |    |
+| **사용자**     | 로그인                 | 사용자의 로그인 절차 |    |
+|               | 로그아웃               | 사용자의 로그아웃 절차 |    |
 |               | 게시글                 | 블로그 게시글 관련 기능 |                   |
-|               | 글 생성                | 새 게시글을 작성하는 방법 | (영상 삽입 예정)   |
-|               | 파일 첨부              | 게시글에 파일을 첨부하는 방법 | (영상 삽입 예정)   |
-|               | 글 읽기 (조회 수)       | 게시글을 읽고 조회 수를 확인하는 방법 | (영상 삽입 예정)   |
-|               | 글 수정                | 기존 게시글을 수정하는 방법 | (영상 삽입 예정)   |
-|               | 글 삭제                | 게시글을 삭제하는 방법 | (영상 삽입 예정)   |
+|               | 글 생성                | 새 게시글을 작성하는 방법 |    |
+|               | 파일 첨부              | 게시글에 파일을 첨부하는 방법 |    |
+|               | 글 읽기 (조회 수)       | 게시글을 읽고 조회 수를 확인하는 방법 |    |
+|               | 글 수정                | 기존 게시글을 수정하는 방법 |    |
+|               | 글 삭제                | 게시글을 삭제하는 방법 |    |
 |               | 댓글                   | 댓글 관련 기능 |                   |
-|               | 댓글 작성              | 새 댓글을 작성하는 방법 | (영상 삽입 예정)   |
-|               | 댓글 수정              | 기존 댓글을 수정하는 방법 | (영상 삽입 예정)   |
-|               | 댓글 삭제              | 댓글을 삭제하는 방법 | (영상 삽입 예정)   |
-| **관리자**     | 로그인                 | 관리자의 로그인 절차 | (영상 삽입 예정)   |
-|               | 로그아웃               | 관리자의 로그아웃 절차 | (영상 삽입 예정)   |
-|               | 관리자페이지           | 관리자 페이지의 기능 | (영상 삽입 예정)   |
+|               | 댓글 작성              | 새 댓글을 작성하는 방법 |    |
+|               | 댓글 수정              | 기존 댓글을 수정하는 방법 |    |
+|               | 댓글 삭제              | 댓글을 삭제하는 방법 |    |
+| **관리자**     | 로그인                 | 관리자의 로그인 절차 |    |
+|               | 로그아웃               | 관리자의 로그아웃 절차 |    |
+|               | 관리자페이지           | 관리자 페이지의 기능 |    |
 
 
 

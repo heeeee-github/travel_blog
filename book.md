@@ -358,7 +358,7 @@ class PostForm(forms.ModelForm) :
 
 ### 2) View 설계
 다음으로 `blog`앱의 `views.py`에서 뷰를 구현합니다.
-블로그에 작성되어 있는 게시글 목록, 상세 목록, 글 생성, 글 수정, 글 삭제 화면을 구현합니다.
+블로그에 작성되어 있는 게시글 목록, 상세 내용, 글 생성, 글 수정, 글 삭제 화면을 구현합니다.
 
 #### 가) 게시글 목록
 블로그에 게시 중인 글들을 볼 수 있는 목록 화면을 구현합니다.
@@ -1016,12 +1016,16 @@ urlpatterns = [
     <h1>게시글 목록</h1>
     <!-- 사용자 계정 관련 링크 추가 -->
     <div>
+        {% if not request.user.is_authenticated %}
         <a href="{% url 'signup' %}">회원가입</a> |
         <a href="{% url 'login' %}">로그인</a> |
-        <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit">로그아웃</button>
-        </form>
+        {% endif %}
+
+        {% if request.user.is_authenticated %}
+            <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">로그아웃</button>
+            </form>
     </div>
     <!-- 생략 -->
 </body>
@@ -1060,8 +1064,8 @@ INSTALLED_APPS = [
 여기서는 게시글 목록확인 및 CRUD 제한 기능을 확인하기 위하여 `/blog/`로 URL을 지정합니다.
 
 ```python
-LOGIN_REDIRECT_URL = '/blog/'
-LOGOUT_REDIRECT_URL = '/blog/'
+LOGIN_REDIRECT_URL = "/blog/"
+LOGOUT_REDIRECT_URL = "/blog/"
 ```
 
 > **`REDIRECT_URL`**
@@ -1287,6 +1291,1091 @@ def post_delete(request, pk):
 </html>
 ```
 
+# 8. 파일 업로드
+
+## 가. 단일 파일 업로드
+단일 파일 업로드 방법은 `Model`에서 Post내에 파일을 받는 필드를 설정합니다.
+
+### 1) setting
+
+#### 가) 패키지 설치
+Django에서 이미지, 영상, 음악 파일을 업로드하고 처리하기 위해서는 `pillow`패키지가 필요합니다. 해당 패키지는 이미지 처리와 관련된 기능을 제공하며, Django의 `ImageField`를 사용할 수 있습니다. (영상, 음악)
+```shell
+python -m pip install pillow
+```
+
+#### 나) travel_blog/settings.py
+업로드된 파일을 받기 위하여 미디어 파일의 경로를 새로 생성합니다.
+
+먼저, `travel_blog` 폴더에 `media` 파일을 생성합니다.
+```shell
+mkdir media
+```
+이후 `travel_blog/travel_blog/settings.py`에서 파일 경로를 설정합니다.
+```python
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+```
+
+#### 다) travel_blog/urls.py
+다음으로 미디어 파일을 제공할 수 있도록 `urls.py`에서 설정을 추가합니다.
+- `from django.conf import settings` : Django의 `settings.py`에 접근할 수 있도록 설정 후 미디어 파일의 URL과 저장 경로를 가져옵니다.
+- `from django.conf.urls.static import static` : 미디어 파일을 서빙하기 위한 
+
+```python
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    # 기존 URL 패턴들
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+```
+
+### 2) Model 수정
+#### 가) Models.py 작성
+파일을 업로드 할 수 있는 기능을 추가하는 과정입니다. 파일은 사진, 영상, 음악을 각각 분류하여 파일을 받습니다.
+- 사진 : `ImageField`로 사진을 저장합니다.
+- 영상 : `FielField`로 영상을 저장합니다. 
+- 음악 : `FielField`로 음악을 저장합니다. 
+
+`blog/models.py`에서 아래의 코드를 추가합니다.
+```python
+class Post(models.Model) : 
+    # 생략
+    image = models.ImageField(upload_to='images/', blank=True, null=True)
+    video = models.FileField(upload_to='videos/', blank=True, null=True)
+    audio = models.FileField(upload_to='audios/', blank=True, null=True) 
+    # 생략
+```
+#### 나) 마이그레이션 생성 및 적용
+모델을 재정의한 후 데이터베이스에 모델을 반영하기 위하여 마이그레이션을 생성하고 적용합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 3) Form 수정
+업로드 파일을 받을 수 있도록 폼을 수정합니다.
+`blog/forms.py`에서 아래의 코드를 추가합니다.
+```python
+class PostForm(forms.ModelForm) : 
+    class Meta : 
+        model = Post 
+        fields = ['title', 'content', 'category', 'image', 'video','audio'] # 수정된 코드
+```
+
+### 4) View 수정
+사진, 영상, 음악을 포함한 데이터가 제대로 저장될 수 있도록 뷰도 수정합니다.  
+`post_create` , `post_update` 의 `PostForm` 부분에 `request.POST` 외에도 `request.FILES`를 추가하여 form과 함께 파일이 업로드 되도록 작성합니다.
+
+```python
+@login_required
+def post_create(request):
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES) # 수정된 코드
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            return redirect('post_list')
+    else:
+        form = PostForm()
+    return render(request, 'blog/post_create.html', {'form': form})
+
+@login_required
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.author != request.user:  
+        raise PermissionDenied  
+    
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, instance=post) # 수정된 코드
+        if form.is_valid():
+            form.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        form = PostForm(instance=post)
+    
+    return render(request, 'blog/post_update.html', {'form': form})
+
+```
+
+### 5) 템플릿 수정
+마지막으로 이미지와 영상을 표시할 수 있도록 템플릿을 수정합니다.
+
+#### 가) blog/post_create.html
+글을 작성할 때 HTML 폼에서 파일 업로드를 처리할 때 사용하는 중요한 속성을 `post_create.html`에  추가해야 합니다.
+`enctype="multipart/form-data"` 코드를 추가하여 다음의 동작 과정을 거쳐 데이터를 받을 수 있게 설정합니다.
+- 폼 제출 : 사용자가 폼을 제출하면 브라우저는 입력된 텍스트와 선택된 파일을 서버로 전송합니다.
+- 데이터 인코딩 : 텍스트 필드 데이터와 파일 데이터로 각각 나누어 인코딩 합니다.
+- 서버 처리 : 텍스트 데이터는 `request.POST`로, 파일 데이터는 `request.FILES`로 접근합니다.
+```HTML
+    <!-- 생략 -->
+    <!-- 수정된 코드 -->
+    <form method="post" enctype="multipart/form-data"> 
+    <!-- 생략 -->
+```
+
+#### 나) blog/post_detail.html
+글의 상세 내용을 보여주는 `post_detail.html`에 표시될 수 있도록 추가합니다.
+`style="max-width: 100%; height: auto;"` 코드를 사용하여 보여주는 영상 또는 이미지의 크기를 제한합니다.
+```HTML
+    <!-- 생략 -->
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.content }}</p>
+    <p>카테고리: {{ post.category.name }}</p>
+    <p>작성자: {{ post.author }}</p>
+    <p>게시일: {{ post.created_at }}</p>
+    <p>수정일: {{ post.updated_at }}</p>
+    
+    {% if post.image %}
+        <img src="{{ post.image.url }}" alt="Post Image" style="max-width: 100%; height: auto;">
+    {% endif %}
+    {% if post.video %}
+        <video controls>
+            <source src="{{ post.video.url }}" type="video/mp4" style="max-width: 100%; height: auto;">
+        </video>
+    {% endif %}
+    {% if post.audio %}
+        <audio controls>
+            <source src="{{ post.audio.url }}" type="audio/mpeg" >
+        </audio>
+    {% endif %}
+    <!-- 생략 -->
+</body>
+</html>
+
+```
+
+
+## 나. 다중 파일 업로드
+다중 파일 업로드 방법은 `Model`에서 Post 내에 파일을 받는 방법이 아닌, 각각 생성하여 Post와 연결합니다.
+### 1) setting
+setting은 단일 파일 업로드와 크게 다르지 않습니다. 해당 과정을 진행하였다면 생략 가능합니다.
+
+#### 가) 패키지 설치
+Django에서 이미지, 영상, 음악 파일을 업로드하고 처리하기 위해서는 `pillow`패키지가 필요합니다. 해당 패키지는 이미지 처리와 관련된 기능을 제공하며, Django의 `ImageField`를 사용할 수 있습니다. (영상, 음악)
+```shell
+python -m pip install pillow
+```
+
+#### 나) travel_blog/settings.py
+업로드된 파일을 받기 위하여 미디어 파일의 경로를 새로 생성합니다.
+
+먼저, `travel_blog` 폴더에 `media` 파일을 생성합니다.
+```shell
+mkdir media
+```
+이후 `travel_blog/travel_blog/settings.py`에서 파일 경로를 설정합니다.
+```python
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+```
+#### 다) travel_blog/urls.py
+다음으로 미디어 파일을 제공할 수 있도록 `urls.py`에서 설정을 추가합니다.
+- `from django.conf import settings` : Django의 `settings.py`에 접근할 수 있도록 설정 후 미디어 파일의 URL과 저장 경로를 가져옵니다.
+- `from django.conf.urls.static import static` : 미디어 파일을 서빙하기 위한 
+
+```python
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    # 기존 URL 패턴들
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+```
+
+
+### 2) Model 수정
+#### 가) Models.py
+파일을 업로드 할 수 있는 기능을 추가하는 과정입니다. 파일은 사진, 영상, 음악을 각각 분류하여 파일을 받습니다.
+- 사진 : `ImageField`로 사진을 저장합니다.
+- 영상 : `FielField`로 영상을 저장합니다. 
+- 음악 : `FielField`로 음악을 저장합니다. 
+
+`blog/models.py`에서 아래의 코드를 추가합니다.
+```python
+# 생략 
+class Post(models.Model) : 
+    title = models.CharField(max_length = 200)
+    content = models.TextField()
+    category = models.ForeignKey(Category, related_name = 'posts', on_delete = models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add = True)
+    updated_at = models.DateTimeField(auto_now = True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, default = 1)
+    
+    def __str__(self) : 
+        return self.title
+
+class Image(models.Model):
+    post = models.ForeignKey(Post, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='images/')
+
+    def __str__(self):
+        return f"Image for {self.post.title}"
+
+class Video(models.Model):
+    post = models.ForeignKey(Post, related_name='videos', on_delete=models.CASCADE)
+    video = models.FileField(upload_to='videos/')
+
+    def __str__(self):
+        return f"Video for {self.post.title}"
+
+class Audio(models.Model):
+    post = models.ForeignKey(Post, related_name='audios', on_delete=models.CASCADE)
+    audio = models.FileField(upload_to='audios/')
+
+    def __str__(self):
+        return f"Audio for {self.post.title}"
+```
+
+#### 나) 마이그레이션
+모델 파일이 바뀐 후 마이그레이션을 진행합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 3) Form 수정
+각각 업로드 파일을 받을 수 있도록 폼을 수정합니다.
+`blog/forms.py`에서 아래의 코드를 추가합니다.
+```python
+#새롭게 수정
+from django import forms
+from .models import Post, Image, Video, Audio
+
+class PostForm(forms.ModelForm) : 
+    class Meta : 
+        model = Post 
+        fields = ['title', 'content', 'category']
+        
+class ImageForm(forms.ModelForm):
+    class Meta:
+        model = Image
+        fields = ['image']
+
+class VideoForm(forms.ModelForm):
+    class Meta:
+        model = Video
+        fields = ['video']
+
+class AudioForm(forms.ModelForm):
+    class Meta:
+        model = Audio
+        fields = ['audio']
+```
+또한 폼셋(formset)을 정의하여 여러개의 이미지를 업로드 할 수 있도록 설정합니다.
+업로드 가능한 파일 수는 최대 5개로 합니다.
+```python
+from django.forms import modelformset_factory
+
+ImageFormSet = modelformset_factory(Image, form=ImageForm, extra=5, can_delete=True)
+VideoFormSet = modelformset_factory(Video, form=VideoForm, extra=5, can_delete=True)
+AudioFormSet = modelformset_factory(Audio, form=AudioForm, extra=5, can_delete=True)
+```
+
+### 4) View 수정
+뷰에서 각 파일 타입의 폼과 폼셋(formset)을 처리하여 여러 개의 파일을 업로드 할 수 있도록 합니다.
+사진, 영상, 음악을 포함한 데이터가 제대로 저장될 수 있도록 뷰도 수정합니다.
+
+앞서 작성한 models와 forms에서 들고와 `post_create`를 변경합니다.
+
+#### 가) `post_create`
+```python
+# import 변경
+from .models import Post, Category, Image, Video, Audio
+from .forms import PostForm, ImageFormSet, VideoFormSet, AudioFormSet
+
+# post_create 변경
+@login_required
+def post_create(request):
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES)
+        image_formset = ImageFormSet(request.POST, request.FILES, queryset=Image.objects.none())
+        video_formset = VideoFormSet(request.POST, request.FILES, queryset=Video.objects.none())
+        audio_formset = AudioFormSet(request.POST, request.FILES, queryset=Audio.objects.none())
+
+        if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+        
+            for form in image_formset:
+                if form.cleaned_data and form.cleaned_data.get('image'):
+                    image = form.save(commit=False)
+                    image.post = post
+                    image.save()
+
+            for form in video_formset:
+                if form.cleaned_data and form.cleaned_data.get('video'):
+                    video = form.save(commit=False)
+                    video.post = post
+                    video.save()
+
+            for form in audio_formset:
+                if form.cleaned_data and form.cleaned_data.get('audio'):
+                    audio = form.save(commit=False)
+                    audio.post = post
+                    audio.save()
+                    
+            return redirect('post_list')
+                    
+    else:
+        form = PostForm()
+        image_formset = ImageFormSet(queryset=Image.objects.none())
+        video_formset = VideoFormSet(queryset=Video.objects.none())
+        audio_formset = AudioFormSet(queryset=Audio.objects.none())
+
+    return render(request, 'blog/post_create.html', {
+        'form': form,
+        'image_formset': image_formset,
+        'video_formset': video_formset,
+        'audio_formset': audio_formset,
+    })
+```
+
+`post_update`를 변경합니다.
+
+#### 나) `post_update`
+```python
+# post_update 변경
+@login_required
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.author != request.user:  
+        raise PermissionDenied
+    
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, instance=post)
+        image_formset = ImageFormSet(request.POST, request.FILES, queryset=Image.objects.filter(post=post))
+        video_formset = VideoFormSet(request.POST, request.FILES, queryset=Video.objects.filter(post=post))
+        audio_formset = AudioFormSet(request.POST, request.FILES, queryset=Audio.objects.filter(post=post))
+        
+        if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
+            post = form.save()
+            
+            for image_form in image_formset:
+                if image_form.cleaned_data and image_form.cleaned_data.get('image'):
+                    image = image_form.save(commit=False)
+                    image.post = post
+                    image.save()
+
+            for video_form in video_formset:
+                if video_form.cleaned_data and video_form.cleaned_data.get('video'):
+                    video = video_form.save(commit=False)
+                    video.post = post
+                    video.save()
+
+            for audio_form in audio_formset:
+                if audio_form.cleaned_data and audio_form.cleaned_data.get('audio'):
+                    audio = audio_form.save(commit=False)
+                    audio.post = post
+                    audio.save()
+
+            return redirect('post_detail', pk=post.pk)
+    else:
+        form = PostForm(instance=post)
+        image_formset = ImageFormSet(queryset=Image.objects.filter(post=post))
+        video_formset = VideoFormSet(queryset=Video.objects.filter(post=post))
+        audio_formset = AudioFormSet(queryset=Audio.objects.filter(post=post))
+    
+    return render(request, 'blog/post_update.html', {
+        'form': form,
+        'image_formset': image_formset,
+        'video_formset': video_formset,
+        'audio_formset': audio_formset,
+    })
+
+```
+
+### 5) 템플릿 수정
+마지막으로 이미지와 영상을 표시할 수 있도록 템플릿을 수정합니다.
+
+#### 가) blog/post_create.html
+템플릿에서 각 파일 유형에 맞는 입력 필드를 추가합니다.
+
+폼셋을 사용하고 있으므로 각 폼셋의 폼들을 렌더릴 할 수 있는 코드를 포함하여 `post_create.html`에 작성 합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>글 작성</title>
+</head>
+<body>
+    <h1>글 작성</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        
+        <h2>이미지 업로드</h2>
+        {{ image_formset.management_form }}
+        {% for image_form in image_formset %}
+            {{ image_form.as_p }}
+        {% endfor %}
+
+        <h2>비디오 업로드</h2>
+        {{ video_formset.management_form }}
+        {% for video_form in video_formset %}
+            {{ video_form.as_p }}
+        {% endfor %}
+
+        <h2>오디오 업로드</h2>
+        {{ audio_formset.management_form }}
+        {% for audio_form in audio_formset %}
+            {{ audio_form.as_p }}
+        {% endfor %}
+        
+        <button type="submit">저장</button>  
+    </form>
+    <a href="{% url 'post_list' %}">목록</a> 
+</body>
+</html>
+```
+
+#### 나) blog/post_detail.html
+글의 상세 내용을 보여주는 `post_detail.html`에 표시될 수 있도록 추가합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>{{ post.content }}</p>
+    <p>카테고리: {{ post.category.name }}</p>
+    <p>작성자: {{ post.author }}</p>
+    <p>게시일: {{ post.created_at }}</p>
+    <p>수정일: {{ post.updated_at }}</p>
+    
+    <h2>이미지</h2>
+    {% for image in post.images.all %}
+        <img src="{{ image.image.url }}" alt="Post Image" style="max-width: 100%; height: auto;">
+    {% empty %}
+        <p>이미지가 없습니다.</p>
+    {% endfor %}
+
+    <h2>비디오</h2>
+    {% for video in post.videos.all %}
+        <video controls style="max-width: 100%; height: auto;">
+            <source src="{{ video.video.url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    {% empty %}
+        <p>비디오가 없습니다.</p>
+    {% endfor %}
+
+    <h2>오디오</h2>
+    {% for audio in post.audios.all %}
+        <audio controls>
+            <source src="{{ audio.audio.url }}" type="audio/mpeg">
+            Your browser does not support the audio tag.
+        </audio>
+    {% empty %}
+        <p>오디오가 없습니다.</p>
+    {% endfor %}
+
+    {% if post.author == request.user %}
+        <a href="{% url 'post_update' post.pk %}">수정</a>
+        <a href="{% url 'post_delete' post.pk %}">삭제</a>
+    {% endif %}
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>
+```
+
+
+# 9. 댓글
+게시글에 댓글 기능을 추가하는 단계입니다.
+
+## 가. 댓글 작성
+먼저 작성된 게시글에 댓글을 작성할 수 있도록 댓글 작성 기능을 구현합니다.
+### 1) Model 수정
+먼저 `blog/models.py`파일에 댓글을 저장할 모델을 만듭니다. 
+ * 기존에 작성한 `Post`과 외래키로 연결합니다.
+ * 내장되어 있는 `User`과 외래키로 연결합니다.
+```python
+class Comment(models.Model) : 
+    post = models.ForeignKey(Post, related_name='comments', on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add = True )
+    
+    def __str__(self) : 
+        return f"댓글 : {self.author} on {self.post}"
+```
+
+### 2) 마이그레이션 생성 및 적용
+모델을 재정의한 후 데이터베이스에 모델을 반영하기 위하여 마이그레이션을 생성하고 적용합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 3) Form 추가
+댓글을 작성한 폼을 `blog/forms.py`에서 작성합니다.
+* models.py에서 작성한 comment를 불러옵니다.
+* 사용자에게 받는 데이터는 `content`입니다.
+```python
+from .models import Comment
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['content']
+```
+
+### 4) Views 수정
+기존에 작성한 게시글 상세 내용 뷰에서 댓글을 작성하고 저장하는 기능을 추가합니다.
+* models.py에서 작성한 comment를 불러옵니다.
+* forms.py에서 작성한 commentForm을 불러옵니다.
+* post에 있는 모든 comments를 불러오는 명령어를 작성합니다.
+* comment 입력값 여부를 확인 후 결과를 제공합니다.
+
+```python
+from .models import Comment
+from .forms import CommentForm
+
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+# 코드 추가
+    comments = post.comments.all()
+
+    if request.method == "POST":
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        comment_form = CommentForm()
+
+    return render(request, 'blog/post_detail.html', {
+        'post': post, 
+        'comments': comments,
+        'comment_form': comment_form
+    })
+```
+
+### 5) Template 수정
+댓글을 표시하고, 새로운 댓글을 작성할 수 있는 폼을 추가합니다.
+`post_detail.html` 파일에 다음과 같이 수정합니다.
+
+```HTML
+<!-- 생략("오디오" 아래) -->
+    <h2>댓글</h2>
+    <div>
+        {% for comment in comments %}
+            <p><strong>{{ comment.author }}</strong>: {{ comment.content }}</p>
+            <p>작성일: {{ comment.created_at }}</p>
+            <hr>
+        {% endfor %}
+    </div>
+
+    {% if request.user.is_authenticated %}
+        <h3>댓글 작성</h3>
+        <form method="post">
+            {% csrf_token %}
+            {{ comment_form.as_p }}
+            <button type="submit">댓글 달기</button>
+        </form>
+    {% else %}
+        <p>댓글을 작성하려면 로그인하세요.</p>
+    {% endif %}
+    <!-- 생략("수정" 위) -->
+
+```
+댓글 작성 기능이 구현되었습니다.
+테스트를 통해 사용자들이 각 게시글에 댓글을 작성하고 댓글을 확인할 수 있는지 확인합니다.
+
+## 나. 댓글 수정 및 삭제
+작성한 댓글을 수정하거나 삭제할 수 있도록 기능을 추가하는 단계입니다.
+* 댓글의 작성자에게만 권한을 부여합니다.
+* 수정 또는 삭제를 처리하는 뷰를 추가합니다.
+* 수정 또는 삭제를 처리하는 URL을 추가합니다.
+* 수정 또는 삭제를 위한 Template 화면을 생성합니다.
+
+### 1) View 추가
+댓글을 수정하고 삭제하는 뷰를 작성합니다.   
+앞서 `models.py`와 `forms.py`에서 각각 `Comment`와 `CommentForm`을 가져왔기 때문에, 해당 과정에서는 댓글을 수정하고 삭제하는 기능만 정의합니다.
+```python
+@login_required
+def comment_edit(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+
+    if comment.author != request.user:
+        raise PermissionDenied
+
+    if request.method == "POST":
+        form = CommentForm(request.POST, instance=comment)
+        if form.is_valid():
+            form.save()
+            print(comment.post.pk)  
+            return redirect('post_detail', pk=comment.post.pk)
+    else:
+        form = CommentForm(instance=comment)
+
+    return render(request, 'blog/comment_edit.html', {'form': form, 'comment' : comment})
+
+@login_required
+def comment_delete(request, pk):
+    comment = get_object_or_404(Comment, pk=pk)
+
+    if comment.author != request.user:
+        raise PermissionDenied
+
+    if request.method == "POST":
+        post_pk = comment.post.pk
+        comment.delete()
+        return redirect('post_detail', pk=post_pk)
+
+    return render(request, 'blog/comment_delete.html', {'comment': comment})
+```
+
+### 2) URL
+댓글을 수정하고 삭제할 수 있는 URL패턴을 추가하여 해당 경로로 들어가 수정할 수 있도록 설정합니다.
+다음의 코드를 `blog/urls.py`에 작성합니다.
+
+```python
+urlpatterns = [
+    # 생략
+    path('comment/<int:pk>/edit/', views.comment_edit, name='comment_edit'),
+    path('comment/<int:pk>/delete/', views.comment_delete, name='comment_delete'),
+]
+
+```
+
+### 3) Templates
+댓글 수정과 삭제를 위한 템플릿을 추가합니다. 
+
+#### 가) comment_edit.html
+댓글 수정을 위해 새로운 HTML 파일을 생성하여 아래의 코드를 작성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>댓글 수정</title>
+</head>
+<body>
+    <h1>댓글 수정</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">수정</button>
+    </form>
+    <a href="{% url 'post_detail' pk=comment.post.pk %}">취소</a>
+</body>
+</html>
+```
+
+#### 나) comment_delete.html
+댓글 삭제를 위해 새로운 HTML 파일을 생성하여 아래의 코드를 작성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>댓글 삭제</title>
+</head>
+<body>
+    <h1>댓글 삭제</h1>
+    <p>정말로 댓글을 삭제하시겠습니까?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">삭제</button>
+    </form>
+    <a href="{% url 'post_detail' pk=comment.post.pk %}">취소</a>
+</body>
+</html>
+```
+
+#### 다) post_detail.html
+기존에 작성한 `post_detail.html`에서 작성된 댓글 목록을 들고올 때, 작성자인 경우 수정, 삭제 버튼이 보이도록 코드를 추가합니다.
+```HTML
+    <h2>댓글</h2>
+    <div>
+        {% for comment in comments %}
+            <p><strong>{{ comment.author }}</strong>: {{ comment.content }}</p>
+            <p>작성일: {{ comment.created_at }}</p>
+            {% if comment.author == request.user %}
+                <a href="{% url 'comment_edit' comment.pk %}">수정</a>
+                <a href="{% url 'comment_delete' comment.pk %}">삭제</a>
+            {% endif %}
+            <hr>
+        {% endfor %}
+    </div>
+```
+
+서버를 실행 후 댓글이 정상적으로 수정 및 삭제가 되는지 확인합니다.
+
+
+## 다. 답글
+댓글에 대한 댓글을 구현하는 단계입니다. 기존 댓글 시스템을 확장하여 답글을 작성할 수 있도록 구현합니다.
+
+### 1) Model 수정
+답글을 구현하기 위하여 `blog/models.py`내 `Comment`함수에 `related_name='replies'` 코드를 사용하여 자기참조 필드를 추가합니다.
+```python
+class Comment(models.Model) : 
+    post = models.ForeignKey(Post, related_name='comments', on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add = True )
+    parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE) # 추가된 코드
+    
+    def __str__(self) : 
+        return f"댓글 : {self.author} on {self.post}"
+```
+
+### 2) Migrate
+모델을 재정의한 후 데이터베이스에 수정된 내용을 반영하기 위하여 마이그레이션을 진행하고 적용합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 3) View
+답글 기능을 처리하기 위하여 필요항 요청을 처리하는 뷰 함수를 정의합니다. 해당 함수로 사용자가 댓글에 답글을 작성할 수 있도록 하고, 답글을 댓글과 게시글에 연결하는 역할을 합니다.
+* 답글을 처리할 수 있도록 `parent` 필드를 처리하는 코드를 작성합니다.
+* 댓글과 답글을 구분하여 템플릿에 전달합니다.
+`blog/views.py`에서 작성한 기존 게시글 상세 내용 폼에서 `comments`부분을 수정합니다.
+
+```python
+@login_required
+def comment_reply(request):
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.author = request.user
+            comment.post = get_object_or_404(Post, pk=request.POST['post'])
+            reply_to_pk = request.POST.get('reply_to')
+            if reply_to_pk:
+                reply_to_comment = get_object_or_404(Comment, pk=reply_to_pk)
+                comment.parent = reply_to_comment
+            comment.save()
+            return redirect('post_detail', pk=comment.post.pk)
+    return redirect('index')
+```
+
+### 3) URL 추가
+작성한 뷰를 화면에서 볼 수 있도록 url을 추가합니다.
+```python
+urlpatterns = [
+    # 생략
+    path('comment/reply/', views.comment_reply, name='comment_reply'),
+]
+```
+
+### 5) Template 수정
+#### 가) blog/post_detail.html
+답글을 작성할 수 있는 폼과 답글을 보여주는 기능을 `blog/post_datail.html`에 추가합니다.
+```HTML
+    <h2>댓글</h2>
+    <div>
+        {% for comment in comments %}
+            <p><strong>{{ comment.author }}</strong>: {{ comment.content }}</p>
+            <p>작성일: {{ comment.created_at }}</p>
+            {% if comment.author == request.user %}
+                <a href="{% url 'comment_edit' comment.pk %}">수정</a>
+                <a href="{% url 'comment_delete' comment.pk %}">삭제</a>
+            {% endif %}
+
+            <!-- 답글 작성 버튼 -->
+            <a href="?reply_to={{ comment.pk }}">답글</a>
+
+            <!-- 답글 폼 표시 -->
+            {% if request.GET.reply_to == comment.pk|stringformat:"s" %}
+                <form method="post" action="{% url 'comment_reply' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="post" value="{{ post.pk }}">
+                    <input type="hidden" name="reply_to" value="{{ comment.pk }}">
+                    <textarea name="content" required></textarea>
+                    <button type="submit">답글 작성</button>
+                </form>
+            {% endif %}
+
+            <!-- 답글 목록 -->
+            <div class="replies">
+                {% for reply in comment.replies.all %}
+                    <div class="comment" style="margin-left: 20px;">
+                        <p><strong>{{ reply.author }}</strong>: {{ reply.content }}</p>
+                        <p>작성일: {{ reply.created_at }}</p>
+                        {% if reply.author == request.user %}
+                            <a href="{% url 'comment_edit' reply.pk %}">수정</a>
+                            <a href="{% url 'comment_delete' reply.pk %}">삭제</a>
+                        {% endif %}
+                        <!-- 답글 작성 버튼 -->
+                        <a href="?reply_to={{ reply.pk }}">답글</a>
+            
+                        <!-- 답글 폼 표시 -->
+                        {% if request.GET.reply_to == comment.pk|stringformat:"s" %}
+                            <form method="post" action="{% url 'comment_reply' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="post" value="{{ post.pk }}">
+                                <input type="hidden" name="reply_to" value="{{ comment.pk }}">
+                                <textarea name="content" required></textarea>
+                                <button type="submit">답글 작성</button>
+                            </form>
+                        {% endif %}
+
+                        <!-- 답글의 답글 목록 -->
+                        <div class="replies">
+                            {% for nested_reply in reply.replies.all %}
+                                <div class="comment" style="margin-left: 40px;">
+                                    <p><strong>{{ nested_reply.author }}</strong>: {{ nested_reply.content }}</p>
+                                    <p>작성일: {{ nested_reply.created_at }}</p>
+                                    {% if nested_reply.author == request.user %}
+                                        <a href="{% url 'comment_edit' nested_reply.pk %}">수정</a>
+                                        <a href="{% url 'comment_delete' nested_reply.pk %}">삭제</a>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+                <hr>
+        {% endfor %}
+    </div>
+```
+
+#### 나) blog/comment_reply.html
+답글 화면을 구현합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <title>답글 작성</title>
+</head>
+<body>
+    <h1>답글 작성</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">답글 작성</button>
+    </form>
+    <a href="{% url 'post_detail' pk=post.pk %}">취소</a>
+</body>
+</html>
+```
+
+# 10. 마이페이지
+사용자의 마이페이지를 생성하고 추가 기능을 구현하는 단계입니다.
+
+## 가. 프로필 생성
+### 1) Model
+사용자가 자신의 프로필 정보를 수정하거나 자신과 관련된 게시글을 확인할 수 있는 마이페이지 생성이 필요합니다. `profile`모델을 추가하여 사용자의 추가정보를 저장합니다.
+
+```python
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username}의 프로필"
+```
+
+### 2) Signal
+`user`모델이 생성될 때마다 자동으로 `profile`모델도 함께 생성되도록 신호(signals)를 사용할 수 있습니다.  
+`blog/models.py`에 이어서 작성할 수 있으나 향후 사용자가 많아지는 상황을 가정하여 `blog/signals.py`라는 별도의 파일을 만들어 신호 관련 코드를 관리합니다.
+
+#### 가) signal.py
+```python
+from django.contrib.auth.models import User 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Profile
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+```
+
+##### 나) apps.py
+신호 핸들러가 제대로 동작하게 설정하기 위하여 `blog/apps.py`에서 해당 신호 핸들러를 불러오는 코드를 추가합니다.
+
+```python
+from django.apps import AppConfig
+
+class BlogConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "blog"
+
+    # 추가된 코드
+    def ready(self):
+        import blog.signals
+```
+### 3) Migrations
+
+### 4) View 설정
+마이페이지를 보여줄 뷰를 설정합니다.
+
+기존에 생성된 사용자의 경우 프로필이 없으므로, 사용자가 마이페이지를 요청할 때 `profile`이 없으면 자동으로 생성되도록 작성합니다.
+
+```python
+from django.contrib.auth.models import User
+from .models import Profile
+
+@login_required
+def mypage_view(request, username):
+    user = get_object_or_404(User, username=username)
+    profile, created = Profile.objects.get_or_create(user=user)
+    posts = Post.objects.filter(author=user)
+
+    return render(request, 'mypage.html', {'user': user, 'profile': profile, 'posts': posts})
+```
+### 5) URL 설정
+뷰를 연결할 URL 설정을 진행합니다.
+```python
+
+urlpatterns = [
+    path('mypage/<str:username>/', mypage_view, name='mypage'),
+]
+```
+### 6) Template 작성
+마이페이지의 HTML 템플릿을 작성하여 사용자의 프로필 정보와 관련된 게시글을 보여줍니다.
+
+#### 가) mypage.html
+`templates/blog` 폴더에 `mypage.html` 파일을 생성합니다.
+
+프로필 내용 중 사진이 없는 사용자가 있을 수 있으므로 사진 파일 유무를 확인 후 파일이 있을 때에만 사진을 표시하도록 작성합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>{{ user.username }}의 프로필</h1>
+    {% if profile.profile_picture %}
+    <img src="{{ profile.profile_picture.url }}" alt="Profile Picture">
+    {% else %}
+        <p>프로필 사진이 존재하지 않습니다.</p>
+    {% endif %}
+
+    <p>소개: {{ profile.bio }}</p>
+    <p>지역: {{ profile.location }}</p>
+
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>
+```
+
+#### 가) post_list.html
+`templates/blog` 폴더 안 `post_list.html` 파일에서 프로필을 조회할 수 있도록 코드를 추가합니다.   
+URL pattern에서 작성한 주소는 사용자이름(`user id`)를 요청하는 값 까지이므로 `request.user.username` 명령어를 작성하여 로그인 중일 때 마이페이지 버튼이 보이며, 사용자 이름을 제공하도록 작성합니다.
+```HTML
+    <div>
+        {% if not request.user.is_authenticated %}
+        <a href="{% url 'signup' %}">회원가입</a> |
+        <a href="{% url 'login' %}">로그인</a> |
+    {% endif %}
+    
+    {% if request.user.is_authenticated %}
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit">로그아웃</button>
+        </form>
+        <a href="{% url 'mypage' request.user.username %}">마이페이지</a>
+    {% endif %}
+    </div>
+```
+
+## 나.프로필 수정 
+프로필을 수정할 수 있는 기능을 추가합니다.
+
+### 1) 폼 생성 
+기존 뷰 파일(`blog/forms.py`)에서 사용자가 로그인한 상태에서 사용자가 수정할 프로필 내용을 받습니다.
+```python
+from .models import Profile
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['bio', 'profile_picture', 'location']
+```
+
+### 2) 뷰 수정 
+기존 뷰 파일(`blog/views.py`)에서 사용자가 로그인한 상태에서 수정을 할 수 있는 뷰를 작성합니다.
+```python
+from .forms import ProfileForm
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+        if form.is_valid():
+            form.save()
+            return redirect('mypage', username=request.user.username)
+    else:
+        form = ProfileForm(instance=request.user.profile)
+
+    return render(request, 'edit_profile.html', {'form': form})
+```
+
+### 3) URL 설정
+기존 뷰 파일(`blog/urls.py`)에서 뷰와 연결할 URL을 설정합니다.
+```python
+urlpatterns = [
+    # 추가한 코드
+    path('edit_profile/', views.edit_profile, name='edit_profile'),
+]
+```
+
+### 4) Template 
+새로운 템플릿(`templates/blog/edit_profile.html`)을 생성 후 저장합니다.
+```HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>프로필 수정</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">저장하기</button>
+    </form>
+</body>
+</html>
+```
+
+## 비밀번호 변경
+## 닉네임 추가
+
+
+
+
+
+# 11. 대시보드
+대시보드는 웹페이지의 통계표를 확인할 수 있는 화면입니다.
+## 
 
 
 
@@ -1315,47 +2404,157 @@ def post_delete(request, pk):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 8. 댓글
 
 # 9. 생성AI 활용
 
 # 10. 배포
 
 # 11. 추가 기능
-# 사진 업로드
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 게시글 조회수
+게시글을 조회한 횟수를 보여주는 기능을 구현하는 과정입니다.    
+## Model 수정
+게시글 모델에 조회수 필드를 추가합니다.
+코드는 `blog/models.py` 파일 내에 작성합니다.
+```python
+class Post(models.Model) :
+    # 생략
+    views = models.IntegerField(default = 0)
+```
 
-# 댓글(앞 부분에서 제외 시 추가 기능으로 작성)
-## 댓글 추가
-## 댓글 수정
-## 댓글 삭제
-## 대댓글
+## Migration
+모델을 수정한 후 데이터베이스에 반영합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
 
-# 마이페이지
-## 비밀번호 변경
-## 프로필 수정
-## 닉네임 추가
+## View 수정
+게시글을 조회할 때마다 조회수가 증가하도록 뷰를 수정합니다.
+코드는 `blog/views.py` 파일 내에 작성합니다.
+```python
+def post_detail(request, pk):
+    
+    # 조회수 증가코드 추가
+    post.views += 1
+    post.save()
 
-# 파일 모으기
+```
+
+한 사용자가 하나의 게시글을 짧은 시간동안 여러번 조회하여 조회수가 증가하는 것을 방지하기 위하여, 특정 시간동안 동일한 게시글을 여러 번 조회하더라도 조회수가 한 번만 증가하도록 설정할 수 있습니다.
+```python
+    # 쿠키를 이용하여 중복 조회 방지
+    session_key = f'viewed_post_{post.pk}'
+    if not request.session.get(session_key):
+        post.views += 1
+        post.save()
+        request.session[session_key] = True
+        request.session.set_expiry(timedelta(hours=1))  # 1시간 후 쿠키 만료```
+```
+
+
+## Template 수정
+기존에 작성된 템플릿에서 아래의 코드를 추가합니다.   
+코드는 `templates/blog/post_detail.html` 파일 내에 작성합니다.
+
+```HTML
+<!-- 추가한 코드 -->
+<p>조회수: {{ post.views }}</p>
+<!-- 기존 코드 -->
+<p>{{ post.content }}</p>
+```
 
 # 번역
 
@@ -1375,7 +2574,19 @@ pip install django-extensions
 python manage.py show_urls
 ```
 
-## 나. git commit imoji
+## 나. 최근 makemigrations 삭제
+Django 어플리케이션을 구축하며 models.py파일을 잘 못 작성하였을 경우 migrate가 제대로 진행되지 않아 makemigrations로 생성된 파일을 삭제해야 하는 상황이 발생합니다. 파일 삭제가 필요한 경우 아래와 같은 방법으로 파일 삭제를 진행할 수 있습니다.
+
+1) **파일 직접 삭제**   
+    해당하는 파일을 마우스 우클릭 후 파일 삭제 버튼으로 삭제합니다.
+1) **파일 삭제 명령어**   
+    삭제 명령어로 생성된 파일을 삭제합니다.
+    ```shell
+    rm '파일경로/파일명'
+    ```
+
+
+## 다. git commit imoji
 ### 주요 이모지와 의미
 | 이모지  | 코드 (`:`)        | 의미                              |
 |---------|-------------------|-----------------------------------|

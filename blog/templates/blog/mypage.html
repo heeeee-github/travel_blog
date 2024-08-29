@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>{{ user.username }}의 프로필</h1>
+    {% if profile.profile_picture %}
+    <img src="{{ profile.profile_picture.url }}" alt="Profile Picture">
+    {% else %}
+        <p>프로필 사진이 존재하지 않습니다.</p>
+    {% endif %}
+
+    <p>소개: {{ profile.bio }}</p>
+    <p>지역: {{ profile.location }}</p>
+
+    <a href="{% url 'post_list' %}">글 목록</a>
+</body>
+</html>

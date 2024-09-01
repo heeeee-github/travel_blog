@@ -245,7 +245,6 @@ erDiagram
 | **프론트엔드 (Frontend)** | HTML                 | 블로그 글의 내용과 레이아웃을 설계 |
 |                  | CSS                      | 블로그 스타일과 글의 시각적 표현을 스타일링 |
 | **데이터 (Database)**     | Lightsql3            | 블로그의 데이터(포스트, 댓글 등)를 저장하고 관리 |
-| **배포 (Release)**       | AWS Lightsail        | AWS의 VPS 서비스로, 블로그 애플리케이션을 배포하고 호스팅 |
 | **문서 (Document)**      | GitHub                | 블로그 프로젝트의 소스 코드를 관리 |
 |                  | Mermaid                 | 프로젝트 구조와 데이터 흐름을 문서화 |
 

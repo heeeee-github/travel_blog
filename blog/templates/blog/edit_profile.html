@@ -3,14 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Edit Profile - Travel Blog</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Edit Profile</h1>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Save</button>
-    </form>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'blog_main' %}"><strong>Travel Blog</strong></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'post_list' %}">블로그</a>
+                    </li>
+                    {% if not request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'signup' %}">회원가입</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">로그인</a>
+                    </li>
+                    {% endif %}
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link">로그아웃</button>
+                        </form>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'mypage' request.user.username %}">마이페이지</a>
+                    </li>
+                        {% if request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin:index' %}">관리자 페이지</a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container my-5">
+        <h1 class="mb-4">프로필 수정</h1>
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="username" class="form-label"><strong>사용자 이름(아이디)</strong></label> 
+                        <p>{{ user.username }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label"><strong>이메일 주소</strong></label> 
+                        <p>{{ user.email }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="profile_picture" class="form-label"><strong>프로필 사진</strong></label>
+                        <input type="file" class="form-control" id="profile_picture" name="profile_picture">
+                    </div>
+                    <div class="mb-3">
+                        <label for="bio" class="form-label"><strong>자기 소개</strong></label>
+                        <textarea class="form-control" id="bio" name="bio" rows="3">{{ user.profile.bio }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                    <a href="{% url 'mypage' user.username %}" class="btn btn-secondary">취소</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>여행 블로그</h5>
+                    <p>당신의 여행을 더 풍부하게 만들어 드립니다.</p>
+                </div>
+
+                <div class="col-md-3">
+                    <h5>팔로우하세요</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Facebook</a></li>
+                        <li><a href="#" class="text-white">Instagram</a></li>
+                        <li><a href="#" class="text-white">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

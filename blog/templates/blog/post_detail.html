@@ -1,130 +1,290 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ post.title }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>{{ post.title }}</h1>
-    <p>{{ post.content }}</p>
-    <p>카테고리: {{ post.category.name }}</p>
-    <p>작성자: {{ post.author }}</p>
-    <p>게시일: {{ post.created_at }}</p>
-    <p>수정일: {{ post.updated_at }}</p>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'blog_main' %}"><strong>Travel Blog</strong></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'post_list' %}">블로그</a>
+                    </li>
+                    {% if not request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'signup' %}">회원가입</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">로그인</a>
+                    </li>
+                    {% endif %}
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <form action="{% url 'logout' %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link">로그아웃</button>
+                        </form>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'mypage' request.user.username %}">마이페이지</a>
+                    </li>
+                        {% if request.user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin:index' %}">관리자 페이지</a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
     
-    <h2>이미지</h2>
-    {% for image in post.images.all %}
-        <img src="{{ image.image.url }}" alt="Post Image" style="max-width: 100%; height: auto;">
-    {% empty %}
-        <p>이미지가 없습니다.</p>
-    {% endfor %}
+    <!-- Blog Post Content -->
+    <div class="container my-5">
+        <div class="row">
+            <!-- Main Post Content -->
+            <div class="col-lg-8">
+                <h1 class="mb-4">{{ post.title }}</h1>
+                <p class="text-muted"> 조회수: {{ post.views }} | 수정일: {{ post.updated_at }} </p>
 
-    <h2>비디오</h2>
-    {% for video in post.videos.all %}
-        <video controls style="max-width: 100%; height: auto;">
-            <source src="{{ video.video.url }}" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-    {% empty %}
-        <p>비디오가 없습니다.</p>
-    {% endfor %}
+                <div class="mt-4">
+                    <h4>카테고리</h4>
+                    {% if post.category %}
+                        <span class="badge bg-primary me-2">{{ post.category.name }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">카테고리 없음</span>
+                    {% endif %}
+                </div>
 
-    <h2>오디오</h2>
-    {% for audio in post.audios.all %}
-        <audio controls>
-            <source src="{{ audio.audio.url }}" type="audio/mpeg">
-            Your browser does not support the audio tag.
-        </audio>
-    {% empty %}
-        <p>오디오가 없습니다.</p>
-    {% endfor %}
+                {% if post.images.exists %}
+                    <div class="mb-4">
+                        <h2>이미지</h2>
+                        {% for image in post.images.all %}
+                            <img src="{{ image.image.url }}" class="img-fluid rounded mb-3" alt="Post Image">
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
-    <h2>댓글</h2>
-    <div>
-        {% for comment in comments %}
-            <p><strong>{{ comment.author }}</strong>: {{ comment.content }}</p>
-            <p>작성일: {{ comment.created_at }}</p>
-            {% if comment.author == request.user %}
-                <a href="{% url 'comment_edit' comment.pk %}">수정</a>
-                <a href="{% url 'comment_delete' comment.pk %}">삭제</a>
-            {% endif %}
+                    {% if post.videos.exists %}
+                    <div class="mb-4">
+                        <h2>비디오</h2>
+                        {% for video in post.videos.all %}
+                            <video controls class="img-fluid rounded mb-3">
+                                <source src="{{ video.video.url }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
-            <!-- 답글 작성 버튼 -->
-            <a href="?reply_to={{ comment.pk }}">답글</a>
+                    {% if post.audios.exists %}
+                    <div class="mb-4">
+                        <h2>오디오</h2>
+                        {% for audio in post.audios.all %}
+                            <audio controls class="w-100 mb-3">
+                                <source src="{{ audio.audio.url }}" type="audio/mpeg">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
 
-            <!-- 답글 폼 표시 -->
-            {% if request.GET.reply_to == comment.pk|stringformat:"s" %}
-                <form method="post" action="{% url 'comment_reply' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="post" value="{{ post.pk }}">
-                    <input type="hidden" name="reply_to" value="{{ comment.pk }}">
-                    <textarea name="content" required></textarea>
-                    <button type="submit">답글 작성</button>
-                </form>
-            {% endif %}
+                <!-- Post Content -->
+                <div class="mb-4">
+                    <div class="blog-content">
+                        <p>{{ post.content }}</p>                    </div>
+                </div>
 
-            <!-- 답글 목록 -->
-            <div class="replies">
-                {% for reply in comment.replies.all %}
-                    <div class="comment" style="margin-left: 20px;">
-                        <p><strong>{{ reply.author }}</strong>: {{ reply.content }}</p>
-                        <p>작성일: {{ reply.created_at }}</p>
-                        {% if reply.author == request.user %}
-                            <a href="{% url 'comment_edit' reply.pk %}">수정</a>
-                            <a href="{% url 'comment_delete' reply.pk %}">삭제</a>
+                <!-- Author Bio -->
+                <div class="card my-4">
+                    <div class="card-body">
+                        <h5 class="card-title">작성자 소개</h5>
+                        <div class="d-flex align-items-center mb-3">
+                            {% if post.author.profile.profile_picture %}
+                                <img src="{{ post.author.profile.profile_picture.url }}" alt="{{ post.author.username }}" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                            {% endif %}
+                            <h6 class="mb-0">{{ post.author.get_full_name|default:post.author.username }}</h6>
+                        </div>
+                        {% if post.author.profile.bio %}
+                            <p class="card-text">{{ post.author.profile.bio }}</p>
+                        {% else %}
+                            <p class="card-text text-muted">작성자가 아직 자기소개를 작성하지 않았습니다.</p>
                         {% endif %}
-                        <!-- 답글 작성 버튼 -->
-                        <a href="?reply_to={{ reply.pk }}">답글</a>
-            
-                        <!-- 답글 폼 표시 -->
-                        {% if request.GET.reply_to == comment.pk|stringformat:"s" %}
-                            <form method="post" action="{% url 'comment_reply' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="post" value="{{ post.pk }}">
-                                <input type="hidden" name="reply_to" value="{{ comment.pk }}">
-                                <textarea name="content" required></textarea>
-                                <button type="submit">답글 작성</button>
-                            </form>
-                        {% endif %}
+                    </div>
+                </div>
 
-                        <!-- 답글의 답글 목록 -->
-                        <div class="replies">
-                            {% for nested_reply in reply.replies.all %}
-                                <div class="comment" style="margin-left: 40px;">
-                                    <p><strong>{{ nested_reply.author }}</strong>: {{ nested_reply.content }}</p>
-                                    <p>작성일: {{ nested_reply.created_at }}</p>
-                                    {% if nested_reply.author == request.user %}
-                                        <a href="{% url 'comment_edit' nested_reply.pk %}">수정</a>
-                                        <a href="{% url 'comment_delete' nested_reply.pk %}">삭제</a>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
+                {% if request.user.is_authenticated %}
+                        {% csrf_token %}
+                        <a href="{% url 'post_update' post.pk %}" class="btn btn-outline-secondary">수정</a>
+                        <a href="{% url 'post_delete' post.pk %}" class="btn btn-outline-danger">삭제</a>
+                {% endif %}
+
+                <!-- Comments Section -->
+                <div class="comments mt-5">
+                    <h3>댓글</h3>
+                    {% for comment in comments %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ comment.author }}</h5>
+                            <p class="card-text">{{ comment.content }}</p>
+                            <p class="card-text"><small class="text-muted">{{ comment.created_at }}</small></p>
+                            {% if comment.author == request.user %}
+                                <a href="{% url 'comment_edit' comment.pk %}" class="btn btn-secondary btn-sm">수정</a>
+                                <a href="{% url 'comment_delete' comment.pk %}" class="btn btn-danger btn-sm">삭제</a>
+                            {% endif %}
+
+                            <!-- Reply Button -->
+                            <a href="?reply_to={{ comment.pk }}" class="btn btn-primary btn-sm">답글</a>
+
+                            <!-- Reply Form -->
+                            {% if request.GET.reply_to == comment.pk|stringformat:"s" %}
+                                <form method="post" action="{% url 'comment_reply' %}" class="mt-3">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="post" value="{{ post.pk }}">
+                                    <input type="hidden" name="reply_to" value="{{ comment.pk }}">
+                                    <textarea name="content" class="form-control" rows="3" required></textarea>
+                                    <button type="submit" class="btn btn-primary mt-2">답글 작성</button>
+                                </form>
+                            {% endif %}
+
+                            <!-- Replies List -->
+                            <div class="replies mt-3">
+                                {% for reply in comment.replies.all %}
+                                    <div class="card mb-2" style="margin-left: 20px;">
+                                        <div class="card-body">
+                                            <p><strong>{{ reply.author }}</strong>: {{ reply.content }}</p>
+                                            <p><small class="text-muted">{{ reply.created_at }}</small></p>
+                                            {% if reply.author == request.user %}
+                                                <a href="{% url 'comment_edit' reply.pk %}" class="btn btn-secondary btn-sm">수정</a>
+                                                <a href="{% url 'comment_delete' reply.pk %}" class="btn btn-danger btn-sm">삭제</a>
+                                            {% endif %}
+                                            <a href="?reply_to={{ reply.pk }}" class="btn btn-primary btn-sm">답글</a>
+                                            {% if request.GET.reply_to == reply.pk|stringformat:"s" %}
+                                                <form method="post" action="{% url 'comment_reply' %}" class="mt-2">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="post" value="{{ post.pk }}">
+                                                    <input type="hidden" name="reply_to" value="{{ reply.pk }}">
+                                                    <textarea name="content" class="form-control" rows="3" required></textarea>
+                                                    <button type="submit" class="btn btn-primary mt-2">답글 작성</button>
+                                                </form>
+                                            {% endif %}
+                                            <div class="replies mt-2">
+                                                {% for nested_reply in reply.replies.all %}
+                                                    <div class="card mb-2" style="margin-left: 40px;">
+                                                        <div class="card-body">
+                                                            <p><strong>{{ nested_reply.author }}</strong>: {{ nested_reply.content }}</p>
+                                                            <p><small class="text-muted">{{ nested_reply.created_at }}</small></p>
+                                                            {% if nested_reply.author == request.user %}
+                                                                <a href="{% url 'comment_edit' nested_reply.pk %}" class="btn btn-secondary btn-sm">수정</a>
+                                                                <a href="{% url 'comment_delete' nested_reply.pk %}" class="btn btn-danger btn-sm">삭제</a>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- Comment Form -->
+                {% if request.user.is_authenticated %}
+                    <div class="card mt-4">
+                        <h5 class="card-header">댓글 작성</h5>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ comment_form.as_p }}
+                                <button type="submit" class="btn btn-primary">댓글 달기</button>
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <p>댓글을 작성하려면 <a href="{% url 'login' %}">로그인</a>하세요.</p>
+                {% endif %}
             </div>
-                <hr>
-        {% endfor %}
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Search Widget -->
+                <div class="card mb-4">
+                    <h5 class="card-header">검색</h5>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="검색어를 입력하세요...">
+                            <button class="btn btn-primary" type="button">검색</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <h5 class="card-header">카테고리</h5>
+                    <div class="card-body">
+                        {% for cat in categories %}
+                            <a href="{% url 'posts_by_category' cat.pk %}" class="btn btn-outline-secondary mb-2 {% if cat == category %}active{% endif %}">
+                                {{ cat.name }}
+                            </a>
+                        {% empty %}
+                            <p>카테고리가 없습니다.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <h5 class="card-header">최근 포스트</h5>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            {% for recent_post in recent_posts %}
+                                <li><a href="{% url 'post_detail' recent_post.pk %}">{{ recent_post.title }}</a></li>
+                            {% empty %}
+                                <li>최근 포스트가 없습니다.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    {% if request.user.is_authenticated %}
-        <h3>댓글 작성</h3>
-        <form method="post">
-            {% csrf_token %}
-            {{ comment_form.as_p }}
-            <button type="submit">댓글 달기</button>
-        </form>
-    {% else %}
-        <p>댓글을 작성하려면 로그인하세요.</p>
-    {% endif %}
-    
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>여행 블로그</h5>
+                    <p>당신의 여행을 더 풍부하게 만들어 드립니다.</p>
+                </div>
+
+                <div class="col-md-3">
+                    <h5>팔로우하세요</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Facebook</a></li>
+                        <li><a href="#" class="text-white">Instagram</a></li>
+                        <li><a href="#" class="text-white">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
 
 
-
-
-    {% if post.author == request.user %}
-        <a href="{% url 'post_update' post.pk %}">수정</a>
-        <a href="{% url 'post_delete' post.pk %}">삭제</a>
-    {% endif %}
-    <a href="{% url 'post_list' %}">글 목록</a>
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

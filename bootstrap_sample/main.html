@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>여행 블로그</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        .hero-section {
+            background-image: url('/api/placeholder/1200/400');
+            background-size: cover;
+            background-position: center;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">여행 블로그</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">홈</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">목적지</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">블로그</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">로그인</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section d-flex align-items-center">
+        <div class="container text-white">
+            <h1 class="display-4">당신의 다음 모험을 찾아보세요</h1>
+            <p class="lead">세계 곳곳의 아름다운 목적지와 여행 팁을 만나보세요.</p>
+            <form class="d-flex">
+                <input class="form-control me-2" type="search" placeholder="여행지 검색" aria-label="Search">
+                <button class="btn btn-outline-light" type="submit">검색</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Popular Destinations -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="mb-4">인기 여행지</h2>
+            <div class="row">
+                {% for i in '123'|make_list %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="/api/placeholder/300/200" class="card-img-top" alt="destination">
+                        <div class="card-body">
+                            <h5 class="card-title">인기 여행지 {{ i }}</h5>
+                            <p class="card-text">이 아름다운 목적지에 대한 간단한 설명입니다.</p>
+                            <a href="#" class="btn btn-primary">자세히 보기</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Blog Posts -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="mb-4">최근 블로그 포스트</h2>
+            <div class="row">
+                {% for i in '123'|make_list %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="/api/placeholder/300/200" class="card-img-top" alt="blog post">
+                        <div class="card-body">
+                            <h5 class="card-title">블로그 포스트 제목 {{ i }}</h5>
+                            <p class="card-text">이 블로그 포스트에 대한 간단한 설명입니다.</p>
+                            <a href="#" class="btn btn-outline-primary">읽기</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>여행 블로그</h5>
+                    <p>당신의 여행을 더 풍부하게 만들어 드립니다.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>빠른 링크</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">소개</a></li>
+                        <li><a href="#" class="text-white">목적지</a></li>
+                        <li><a href="#" class="text-white">블로그</a></li>
+                        <li><a href="#" class="text-white">연락처</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>팔로우하세요</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white">Facebook</a></li>
+                        <li><a href="#" class="text-white">Instagram</a></li>
+                        <li><a href="#" class="text-white">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

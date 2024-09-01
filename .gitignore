@@ -10,3 +10,6 @@ db.sqlite3
 
 # file
 book_etc.txt
+
+# folder
+/sample/

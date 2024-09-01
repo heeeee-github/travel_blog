@@ -255,11 +255,10 @@ INSTALLED_APPS = [
 Django에서 생성한 `tmeplates`폴더를 알려주는 과정입니다.
 Django가 `BASE_DIR/templates/` 경로를 인식하여 그곳에서 템플릿 파일을 찾을 수 있게 설정합니다.
 ```python
-import os
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, 'templates')], # 추가된 코드
+        "DIRS": [BASE_DIR / 'templates'],  # 추가된 코드
         # "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -595,8 +594,8 @@ urlpatterns = [
 
 ```python
 # 이어서 작성
-def posts_by_category(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
+def posts_by_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
     posts = Post.objects.filter(category=category)
 
     return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})
@@ -656,7 +655,7 @@ urlpatterns = [
         <h2>Filter by Category</h2>
         <ul>
             {% for category in categories %}
-                <li><a href="{% url 'posts_by_category' category.id %}">{{ category.name }}</a></li>
+                <li><a href="{% url 'posts_by_category' category.pk %}">{{ category.name }}</a></li>
             {% endfor %}
         </ul>
     </div>
@@ -2234,6 +2233,7 @@ class BlogConfig(AppConfig):
 
 기존에 생성된 사용자의 경우 프로필이 없으므로, 사용자가 마이페이지를 요청할 때 `profile`이 없으면 자동으로 생성되도록 작성합니다.
 
+#### mypage_view
 ```python
 from django.contrib.auth.models import User
 from .models import Profile
@@ -2246,6 +2246,7 @@ def mypage_view(request, username):
 
     return render(request, 'mypage.html', {'user': user, 'profile': profile, 'posts': posts})
 ```
+
 ### 5) URL 설정
 뷰를 연결할 URL 설정을 진행합니다.
 ```python
@@ -2285,7 +2286,7 @@ urlpatterns = [
 </html>
 ```
 
-#### 가) post_list.html
+#### 나) post_list.html
 `templates/blog` 폴더 안 `post_list.html` 파일에서 프로필을 조회할 수 있도록 코드를 추가합니다.   
 URL pattern에서 작성한 주소는 사용자이름(`user id`)를 요청하는 값 까지이므로 `request.user.username` 명령어를 작성하여 로그인 중일 때 마이페이지 버튼이 보이며, 사용자 이름을 제공하도록 작성합니다.
 ```HTML
@@ -2302,6 +2303,8 @@ URL pattern에서 작성한 주소는 사용자이름(`user id`)를 요청하는
         </form>
         <a href="{% url 'mypage' request.user.username %}">마이페이지</a>
     {% endif %}
+        <a href="{% url 'mypost' request.user.username %}">마이페이지</a>
+    {% endif %}
     </div>
 ```
 
@@ -2316,7 +2319,26 @@ from .models import Profile
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ['bio', 'profile_picture', 'location']
+        fields = ['profile_picture', 'bio']
+    
+    # 선택적 필드 추가 (예: username은 User 모델의 필드이므로 별도 처리)
+    username = forms.CharField(max_length=150)
+
+    def __init__(self, *args, **kwargs):
+        # instance는 user.profile이 전달되므로, username을 초기값으로 설정
+        user = kwargs.pop('user')
+        super().__init__(*args, **kwargs)
+        self.fields['username'].initial = user.username
+
+    def save(self, commit=True):
+        # user instance 저장
+        user = self.instance.user
+        user.username = self.cleaned_data.get('username')
+        user.save()
+
+        # profile instance 저장
+        profile = super().save(commit=commit)
+        return profile
 ```
 
 ### 2) 뷰 수정 
@@ -2325,15 +2347,20 @@ class ProfileForm(forms.ModelForm):
 from .forms import ProfileForm
 @login_required
 def edit_profile(request):
+    user = request.user
+    
     if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+        form = ProfileForm(request.POST, request.FILES, instance=user.profile, user=user)
         if form.is_valid():
             form.save()
-            return redirect('mypage', username=request.user.username)
+            return redirect('mypage', username=user.username)
     else:
-        form = ProfileForm(instance=request.user.profile)
-
-    return render(request, 'edit_profile.html', {'form': form})
+        form = ProfileForm(instance=user.profile, user=user)
+    
+    context = {
+        'form': form
+    }
+    return render(request, 'blog/edit_profile.html', context)
 ```
 
 ### 3) URL 설정
@@ -2370,12 +2397,240 @@ urlpatterns = [
 ## 닉네임 추가
 
 
+# 11. 글 조회수
+게시글을 조회한 횟수를 보여주는 기능을 구현하는 과정입니다.    
+## 가. Model 수정
+게시글 모델에 조회수 필드를 추가합니다.
+코드는 `blog/models.py` 파일 내에 작성합니다.
+```python
+class Post(models.Model) :
+    # 생략
+    views = models.IntegerField(default = 0)
+```
+
+## 나. Migration
+모델을 수정한 후 데이터베이스에 반영합니다.
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+## 다. View 설정
+게시글을 조회할 때마다 조회수가 증가하도록 뷰를 수정합니다.
+코드는 `blog/views.py` 파일 내에 작성합니다.
+
+### 1) post_detail
+```python
+def post_detail(request, pk):
+    
+    # 조회수 증가코드 추가
+    post.views += 1
+    post.save()
+
+```
+
+한 사용자가 하나의 게시글을 짧은 시간동안 여러번 조회하여 조회수가 증가하는 것을 방지하기 위하여, 특정 시간동안 동일한 게시글을 여러 번 조회하더라도 조회수가 한 번만 증가하도록 설정할 수 있습니다.
+```python
+from datetime import timedelta
+
+    # 쿠키를 이용하여 중복 조회 방지
+    session_key = f'viewed_post_{post.pk}'
+    if not request.session.get(session_key):
+        post.views += 1
+        post.save()
+        request.session[session_key] = True
+        request.session.set_expiry(timedelta(hours=1))  # 1시간 후 쿠키 만료```
+```
+
+### 2) post_list
+조회수로 게시글을 정렬하여 인기글을 확인하는 화면을 제공할 수 있습니다.
+```python
+def post_list(request):
+    posts = Post.objects.all().order_by('-created_at')
+    # Post 객체를 조회하고 정렬 및 슬라이스
+    top_posts = Post.objects.all().order_by('-views')[:10]
+    # 생략
+```
+
+## 라. Template 수정
+기존에 작성된 템플릿에서 아래의 코드를 추가합니다.   
+
+### 1) post_detail
+코드는 `templates/blog/post_detail.html` 파일 내에 작성합니다.
+
+```HTML
+<!-- 추가한 코드 -->
+<p>조회수: {{ post.views }}</p>
+<!-- 기존 코드 -->
+<p>{{ post.content }}</p>
+```
+
+### 2) post_list
+코드는 `templates/blog/post_list.html` 파일 내에 `{% for post in posts %}` 부분을 `{% for post in top_posts %}` 로 작성하면 조회순이 높은 게시글 순으로 글을 확인할 수 있습니다.
+
+```HTML
+    <ul>
+        {% for post in top_posts %} # 수정된 부분
+            <li>
+                <a href="{% url 'post_detail' post.pk %}">{{ post.title }}  -  {{ post.created_at}}  </a>
+                {% if post.author == request.user %}  
+                <a href="{% url 'post_update' post.pk %}">수정</a>
+                <a href="{% url 'post_delete' post.pk %}">삭제</a>
+            {% endif %}            
+            </li>
+        {% empty %}
+            <li>게시글이 없습니다.</li>
+        {% endfor %}
+    </ul>
+```
+
+서버 실행 후 결과를 확인합니다.
 
 
+# 12. 컨텐츠 필터링
+특정 단어나 문구를 자동으로 필터링하거나 경고 메세지를 표시하고 관리자 페이지에서 관리 할 수 있도록 기능을 구현하는 단계입니다.
 
-# 11. 대시보드
-대시보드는 웹페이지의 통계표를 확인할 수 있는 화면입니다.
-## 
+## 모델 작성 
+금지어를 데이터베이스에 저장하고 관리할 수 있도록 설정합니다.
+### blog/models.py
+`BannedWord` 함수로 금지어 저장 데이터베이스를 생성합니다.
+```python
+class BannedWord(models.Model):
+    word = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.word
+```
+## 마이그레이션
+모델을 정의한 후 모델을 데이터베이스에 반영하기 위하여 마이그레이션을 생성하고 적용합니다.
+
+**마이그레이션 생성**
+```shell
+python manage.py makemigrations
+```
+
+**마이그레이션 적용**
+```shell
+python manage.py migrate
+```
+
+## 관리자페이지 등록
+금지어를 관리하기 위하여 관리자페이지에 `BannedWord` 모델을 등록합니다.
+`blog/admin.py`파일에 다음 코드를 추가하여 `BannedWord` 모델을 관리자 페이지에 등록합니다.
+
+```python
+from .models import BannedWord
+admin.site.register(BannedWord)
+```
+
+페이지 등록 후 금지어를 추가, 삭제, 수정할 수 있습니다.
+
+## 검열 함수
+`blog/views.py` 파일에 검열 함수 정의(`censor_text`)를 작성하여 데이터베이스에 저장된 금지어를 기준으로 검열이 이루어지도록 합니다.
+
+`censor_text` 위치는 게시글 관련 정의 앞부분에 작성하여 검열함수가 먼저 정의된 후 글 또는 댓글에서 해당 함수가 동작하도록 배치합니다.
+```python
+import re
+from .models import BannedWord
+
+def censor_text(text):
+    banned_words = BannedWord.objects.values_list('word', flat=True)
+    for word in banned_words:
+        pattern = re.compile(re.escape(word), re.IGNORECASE)
+        text = pattern.sub("*" * len(word), text)
+    return text
+
+```
+
+## 검열 적용
+글 또는 댓글을 저장하기 전에 검열 기능을 적용하도록 코드를 수정합니다.
+### 1) 게시글
+#### 가) 글 생성
+`blog/views.py` 파일 안 `post_create`정의 부분에서 작성글 검열 기능을 적용합니다.
+```python
+@login_required
+def post_create(request):
+    if request.method == "POST":
+    # 생략
+        if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            # 글에 검열 기능 적용
+            post.content = censor_text(post.content)
+            post.save()
+    # 생략
+```
+#### 나) 글 수정
+`blog/views.py` 파일 안 `post_update`정의 부분에서 작성글 검열 기능을 적용합니다.
+```python
+@login_required
+def post_update(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
+    if post.author != request.user:  
+        raise PermissionDenied
+    
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, instance=post)
+        image_formset = ImageFormSet(request.POST, request.FILES, queryset=Image.objects.filter(post=post))
+        video_formset = VideoFormSet(request.POST, request.FILES, queryset=Video.objects.filter(post=post))
+        audio_formset = AudioFormSet(request.POST, request.FILES, queryset=Audio.objects.filter(post=post))
+        
+        if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
+            # 글에 검열 기능 적용
+            post.content = censor_text(post.content)
+            post.save()
+    # 생략
+```
+
+### 2) 댓글
+`blog/views.py` 파일 안 `post_detail`정의 부분에서 댓글 검열 기능을 적용합니다.
+```python
+def post_detail(request, pk):
+    # 생략
+    if request.method == "POST":
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            
+            # 댓글에 검열 기능 적용
+            comment.content = censor_text(comment.content)
+            
+            comment.save()
+            return redirect('post_detail', pk=post.pk)
+    else:
+        comment_form = CommentForm()
+    # 생략
+```
+
+관리자로 로그인 후 관리자페이지에서 금지어를 추가/수정/삭제 후 글 또는 댓글 작성 시 해당 금지어가 잘 검열되는지 확인합니다.
+
+
+## 단어 저장
+이번 과정은 shell을 활용하여 비방 단어를 데이터베이스에 저장하는 방법입니다.
+
+먼저, 새로운 shell창을 열어 준비합니다.
+```shell
+python manage.py shell
+```
+이후 `BannedWord` 모델을 불러와 저장할 단어 목록을 제공합니다.
+
+```shell
+from blog.models import BannedWord
+banned_words = [
+    "쓰레기", "멍청한", "거짓말쟁이", "치사한", "배신자"
+    ## 등등 작성합니다.
+]
+
+for word in banned_words:
+    BannedWord.objects.create(word=word)
+
+# 또는 BannedWord.objects.bulk_create([BannedWord(word=word) for word in banned_words])
+
+```
+
 
 
 
@@ -2410,157 +2665,65 @@ urlpatterns = [
 # 10. 배포
 
 # 11. 추가 기능
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 게시글 조회수
-게시글을 조회한 횟수를 보여주는 기능을 구현하는 과정입니다.    
-## Model 수정
-게시글 모델에 조회수 필드를 추가합니다.
-코드는 `blog/models.py` 파일 내에 작성합니다.
+## 파일 추가 폼 변경
+1개의 파일을 올린 후  extra매개변수를 사용하여 추가 폼을 표시하는 기능입니다.
+### Form 설정
 ```python
-class Post(models.Model) :
-    # 생략
-    views = models.IntegerField(default = 0)
+# forms.py
+from django import forms
+from .models import Image
+
+class ImageForm(forms.ModelForm):
+    class Meta:
+        model = Image
+        fields = ['image']
+
+ImageFormSet = forms.inlineformset_factory(
+    ParentModel,  # Parent model for the formset
+    Image,        # Model for the formset
+    form=ImageForm,
+    extra=1,      # Initial number of forms to display
+    can_delete=True
+)
+
 ```
 
-## Migration
-모델을 수정한 후 데이터베이스에 반영합니다.
-```shell
-python manage.py makemigrations
-python manage.py migrate
-```
-
-## View 수정
-게시글을 조회할 때마다 조회수가 증가하도록 뷰를 수정합니다.
-코드는 `blog/views.py` 파일 내에 작성합니다.
+### View 설정
 ```python
-def post_detail(request, pk):
-    
-    # 조회수 증가코드 추가
-    post.views += 1
-    post.save()
+# blog/views.py
+from django.shortcuts import render, redirect
+from .models import ParentModel, Image
+from .forms import ImageFormSet
+
+def upload_images(request):
+    if request.method == 'POST':
+        formset = ImageFormSet(request.POST, request.FILES)
+        if formset.is_valid():
+            formset.save()
+            return redirect('success_url')  # Redirect after successful form submission
+    else:
+        formset = ImageFormSet()
+
+    return render(request, 'upload_images.html', {'image_formset': formset})
 
 ```
-
-한 사용자가 하나의 게시글을 짧은 시간동안 여러번 조회하여 조회수가 증가하는 것을 방지하기 위하여, 특정 시간동안 동일한 게시글을 여러 번 조회하더라도 조회수가 한 번만 증가하도록 설정할 수 있습니다.
-```python
-    # 쿠키를 이용하여 중복 조회 방지
-    session_key = f'viewed_post_{post.pk}'
-    if not request.session.get(session_key):
-        post.views += 1
-        post.save()
-        request.session[session_key] = True
-        request.session.set_expiry(timedelta(hours=1))  # 1시간 후 쿠키 만료```
-```
+### URL 설정
 
 
-## Template 수정
-기존에 작성된 템플릿에서 아래의 코드를 추가합니다.   
-코드는 `templates/blog/post_detail.html` 파일 내에 작성합니다.
-
-```HTML
-<!-- 추가한 코드 -->
-<p>조회수: {{ post.views }}</p>
-<!-- 기존 코드 -->
-<p>{{ post.content }}</p>
-```
-
-# 번역
+# 12. bootstrap
+각 html 파일 확인
 
 
 
-# 12. 참고
+# 13. 추가 기능
+## 가. 검색
+## 나. 사이드바 ( 진행 완료 )
+## 다. 썸네일
+## 라. 생성AI
+
+
+
+# 14. 참고
 ## 가. URL 패턴 확인
 `django-extensions` 패키지를 활용하여 URL 패턴을 확인할 수 있습니다.
 먼저, 패키지를 설치 합니다.
@@ -2579,7 +2742,7 @@ Django 어플리케이션을 구축하며 models.py파일을 잘 못 작성하�
 
 1) **파일 직접 삭제**   
     해당하는 파일을 마우스 우클릭 후 파일 삭제 버튼으로 삭제합니다.
-1) **파일 삭제 명령어**   
+2) **파일 삭제 명령어**   
     삭제 명령어로 생성된 파일을 삭제합니다.
     ```shell
     rm '파일경로/파일명'

@@ -1,19 +1,62 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
-from .models import Post, Category, Image, Video, Audio, Comment, Profile
-from .forms import PostForm, ImageFormSet, VideoFormSet, AudioFormSet, CommentForm, ProfileForm
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
+from django.db.models import Prefetch
+from .models import Post, Category, Image, Video, Audio, Comment, Profile, BannedWord
+from .forms import PostForm, ImageFormSet, VideoFormSet, AudioFormSet, CommentForm, ProfileForm
+from datetime import timedelta
+import re
+
+def censor_text(text):
+    banned_words = BannedWord.objects.values_list('word', flat=True)
+    for word in banned_words:
+        pattern = re.compile(re.escape(word), re.IGNORECASE)
+        text = pattern.sub("*" * len(word), text)
+    return text
+
+def blog_main(request):
+    posts = Post.objects.all().order_by('-created_at').prefetch_related('images')
+    top_posts = Post.objects.order_by('-views')[:10].prefetch_related('images')
+    recent_posts = Post.objects.order_by('-created_at')[:5].prefetch_related('images')
+
+    return render(request, 'blog/blog_main.html', {
+        'posts': posts,
+        'recent_posts': recent_posts,
+        'top_posts': top_posts,
+    })
+    
 
 def post_list(request):
-    posts = Post.objects.all().order_by('-created_at')
+    posts = Post.objects.all().order_by('-created_at')    
+    # 사이드바를 위한 추가 정보
     categories = Category.objects.all()
-    return render(request, 'blog/post_list.html', {'posts': posts, 'categories': categories})
+    recent_posts = Post.objects.order_by('-created_at')[:5].prefetch_related('images')
+
+    return render(request, 'blog/post_list.html', {
+        'posts': posts,
+        'categories': categories,
+        'recent_posts': recent_posts,
+        'category': None
+    })
+    
+
+def popular_post(request):
+    # Post 객체를 조회하고 정렬 및 슬라이스
+    top_posts = Post.objects.all().order_by('-views')[:5]
+    return render(request, 'blog/blog_view.html', {'top_posts': top_posts})
 
 def post_detail(request, pk):
-    post = get_object_or_404(Post, pk=pk)
+    post = get_object_or_404(Post.objects.prefetch_related('images'), pk=pk)
     comments = post.comments.all()
 
+    session_key = f'viewed_post_{post.pk}'
+    if not request.session.get(session_key):
+        post.views += 1
+        post.save()
+        request.session[session_key] = True
+        request.session.set_expiry(timedelta(hours=1))  # 1시간 후 쿠키 만료```
+        
     if request.method == "POST":
         comment_form = CommentForm(request.POST)
         if comment_form.is_valid():
@@ -25,10 +68,16 @@ def post_detail(request, pk):
     else:
         comment_form = CommentForm()
 
+    # 사이드바를 위한 추가 정보
+    categories = Category.objects.all()
+    recent_posts = Post.objects.order_by('-created_at')[:5]
+    
     return render(request, 'blog/post_detail.html', {
         'post': post, 
         'comments': comments,
-        'comment_form': comment_form
+        'comment_form': comment_form,
+        'categories': categories,
+        'recent_posts': recent_posts,
     })
 
 @login_required
@@ -42,6 +91,8 @@ def post_create(request):
         if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
             post = form.save(commit=False)
             post.author = request.user
+            # 글에 검열 기능 적용
+            post.content = censor_text(post.content)
             post.save()
         
             for form in image_formset:
@@ -91,6 +142,8 @@ def post_update(request, pk):
         audio_formset = AudioFormSet(request.POST, request.FILES, queryset=Audio.objects.filter(post=post))
         
         if form.is_valid() and image_formset.is_valid() and video_formset.is_valid() and audio_formset.is_valid():
+            # 글에 검열 기능 적용
+            post.content = censor_text(post.content)
             post = form.save()
             
             for image_form in image_formset:
@@ -138,11 +191,22 @@ def post_delete(request, pk):
     
     return render(request, 'blog/post_delete.html', {'post': post})
 
-def posts_by_category(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
+def posts_by_category(request, pk):
+    # 사이드바를 위한 추가 정보
+    categories = Category.objects.all()
+    recent_posts = Post.objects.order_by('-created_at')[:5]
+    
+        # 특정 카테고리 게시글 보기
+    category = get_object_or_404(Category, pk=pk)
     posts = Post.objects.filter(category=category).order_by('-created_at')
-    return render(request, 'blog/posts_by_category.html', {'category': category, 'posts': posts})
 
+    return render(request, 'blog/posts_by_category.html', {
+        'category': category,
+        'posts': posts,
+        'categories': categories,
+        'recent_posts': recent_posts,
+    })
+    
 @login_required
 def comment_edit(request, pk):
     comment = get_object_or_404(Comment, pk=pk)
@@ -191,8 +255,6 @@ def comment_reply(request):
             return redirect('post_detail', pk=comment.post.pk)
     return redirect('index')
 
-
-
 @login_required
 def mypage_view(request, username):
     user = get_object_or_404(User, username=username)
@@ -203,12 +265,17 @@ def mypage_view(request, username):
 
 @login_required
 def edit_profile(request):
+    user = request.user
+    
     if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=request.user.profile)
+        form = ProfileForm(request.POST, request.FILES, instance=user.profile, user=user)
         if form.is_valid():
             form.save()
-            return redirect('mypage', username=request.user.username)
+            return redirect('mypage', username=user.username)
     else:
-        form = ProfileForm(instance=request.user.profile)
-
-    return render(request, 'edit_profile.html', {'form': form})
+        form = ProfileForm(instance=user.profile, user=user)
+    
+    context = {
+        'form': form
+    }
+    return render(request, 'blog/edit_profile.html', context)
